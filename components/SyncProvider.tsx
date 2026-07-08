@@ -212,6 +212,27 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
     if (!ids.length) return;
 
     const genreMap: Record<string, string[]> = {};
+
+    // Fold whatever genres we've resolved so far onto the items and persist.
+    // Called before surfacing a rate limit so partial progress survives a
+    // pause/resume (the resume recomputes `need` and skips already-genred items).
+    const applyGenres = () => {
+      if (!Object.keys(genreMap).length) return;
+      setItems(
+        itemsRef.current.map((it) =>
+          it.genres.length
+            ? it
+            : {
+                ...it,
+                genres: [
+                  ...new Set(it.artists.flatMap((a) => genreMap[a.id] ?? [])),
+                ],
+              },
+        ),
+      );
+      persistSnapshot();
+    };
+
     for (let i = 0; i < ids.length; i += GENRE_CHUNK) {
       if (stopRequested()) return;
       const chunk = ids.slice(i, i + GENRE_CHUNK);
@@ -224,23 +245,30 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
       if (res.ok) {
         const { genres } = await res.json();
         Object.assign(genreMap, genres);
+      } else {
+        // A non-ok response here used to be silently ignored, so a throttled
+        // genre phase would still complete "done" with an empty genre filter.
+        // Surface it so run() can pause/flag and the phase can be resumed.
+        const body = await res.json().catch(() => ({} as any));
+        if (res.status === 401) {
+          const e: any = new Error(body.error || "Session expired — please log in again.");
+          e.unauthorized = true;
+          throw e;
+        }
+        if (res.status === 429) {
+          applyGenres(); // keep partial progress before backing off
+          const e: any = new Error(body.detail || "Spotify rate limit");
+          e.rateLimited = true;
+          e.retryAfter =
+            Number(body.retryAfter) || Number(res.headers.get("Retry-After")) || 60;
+          throw e;
+        }
+        // Other errors: skip this chunk, keep going (best-effort).
       }
       patchJob({ genres: { loaded: Math.min(i + GENRE_CHUNK, ids.length), total: ids.length } });
     }
 
-    setItems(
-      itemsRef.current.map((it) =>
-        it.genres.length
-          ? it
-          : {
-              ...it,
-              genres: [
-                ...new Set(it.artists.flatMap((a) => genreMap[a.id] ?? [])),
-              ],
-            },
-      ),
-    );
-    persistSnapshot();
+    applyGenres();
   }
 
   const run = useCallback(async (restart: boolean) => {

@@ -413,11 +413,20 @@ export async function fetchArtistGenresBatch(
   for (let i = 0; i < ids.length; i += 50) {
     const batch = ids.slice(i, i + 50).filter(Boolean);
     if (!batch.length) continue;
+    // Gentle pacing between chunks. A large library resolves thousands of
+    // artists, and firing every /artists request back-to-back reliably trips
+    // Spotify's rolling rate window — which used to come back as a throttled,
+    // silently-dropped chunk (i.e. no genres at all). Stay under the window.
+    if (i > 0) await sleep(120);
     try {
       const d: any = await apiGet("/artists?ids=" + batch.join(","), token);
       for (const a of d.artists ?? []) if (a) map[a.id] = a.genres ?? [];
-    } catch {
-      // Non-fatal: leave these artists without genres.
+    } catch (e) {
+      // A rate limit must NOT be swallowed: doing so returns empty genres for
+      // the whole run and marks the sync "done" with an empty genre filter.
+      // Surface it so the caller can back off and let the user resume.
+      if ((e as any)?.status === 429 || (e as any)?.status === 401) throw e;
+      // Other transient errors stay non-fatal: leave those artists ungenred.
     }
   }
   return map;

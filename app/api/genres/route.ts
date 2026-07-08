@@ -46,6 +46,16 @@ export async function POST(req: NextRequest) {
       if ((e as any)?.status === 401) {
         return NextResponse.json({ error: "unauthorized" }, { status: 401 });
       }
+      if ((e as any)?.status === 429) {
+        // Surface the throttle so the client backs off and can resume later,
+        // instead of us returning 200 with empty genres (which silently leaves
+        // the genre filter blank for a large library).
+        const retryAfter = Number((e as any)?.retryAfter) || 60;
+        return NextResponse.json(
+          { error: "rate_limited", detail: (e as any)?.message, retryAfter },
+          { status: 429, headers: { "Retry-After": String(retryAfter) } },
+        );
+      }
       // Best-effort: return whatever we resolved from cache.
     }
   }

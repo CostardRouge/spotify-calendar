@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { Album } from "@/lib/types";
-import { keyOf, formatDay } from "@/lib/dates";
+import { keyOf } from "@/lib/dates";
 
 /** Detailed single-day view listing every album added that day. */
 export default function DayView({
@@ -23,7 +23,6 @@ export default function DayView({
 
   return (
     <div className="day-view">
-      <h2 className="day-view-title">{formatDay(key)}</h2>
       {list.length === 0 ? (
         <p className="day-view-empty">No albums added on this day.</p>
       ) : (

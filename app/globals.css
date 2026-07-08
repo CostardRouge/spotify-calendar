@@ -97,7 +97,12 @@ a { color: var(--accent); text-decoration: none; }
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   flex: 0 0 auto;
+  position: relative;
 }
+.topbar-actions { display: flex; align-items: center; gap: 16px; }
+/* Gear (options) button and bottom nav are mobile-only — hidden on desktop. */
+.settings-btn { display: none; }
+.bottomnav { display: none; }
 .topbar .logo {
   display: flex; align-items: center; gap: 10px;
   font-family: var(--serif); font-weight: 600; font-size: 18px;
@@ -379,8 +384,12 @@ html.app-ready .side {
 .day-view-empty { color: var(--muted); margin-top: 30px; }
 .day-view-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
 .dv-card { content-visibility: auto; contain-intrinsic-size: auto 220px; }
+.dv-cover { position: relative; }
 .dv-card img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; box-shadow: 0 8px 22px -10px rgba(var(--shadow) / .5); transition: transform .2s cubic-bezier(.16,1,.3,1); }
 .dv-card:hover img { transform: translateY(-3px); }
+.dv-play { position: absolute; right: 10px; bottom: 10px; width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--accent); color: #fff; font-size: 14px; cursor: pointer; display: grid; place-items: center; opacity: 0; transform: translateY(6px); transition: opacity .15s, transform .2s cubic-bezier(.16,1,.3,1); box-shadow: 0 6px 16px -4px rgba(var(--shadow) / .6); }
+.dv-card:hover .dv-play { opacity: 1; transform: translateY(0); }
+.dv-play:hover { filter: brightness(1.08); }
 .dv-name { font-weight: 600; font-size: 14px; margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dv-artist { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dv-year { color: var(--muted); font-family: var(--mono); font-size: 11px; margin-top: 3px; }
@@ -509,8 +518,48 @@ html.app-ready .side {
 ::-webkit-scrollbar-thumb:hover { background: var(--faint); }
 
 @media (max-width: 820px) {
-  .viewswitch { flex-wrap: wrap; }
-  .logo span:not(.dot) { display: none; }
   .cal { padding: 14px 14px; }
   .cal-head .month-label { font-size: 22px; min-width: 0; }
+}
+
+/* ---- Mobile: single-row topbar + bottom tab nav ---- */
+@media (max-width: 768px) {
+  /* Keep the topbar to one short line: filters toggle, logo, gear. */
+  .topbar { gap: 10px; padding: 10px 14px; }
+  .logo span:not(.dot) { display: none; }
+
+  /* View tabs move to the bottom of the screen. */
+  .viewswitch { display: none; }
+
+  /* Gear reveals the sync/count/logout options in a dropdown. */
+  .settings-btn { display: inline-flex; }
+  .topbar-actions {
+    display: none;
+    position: absolute; top: calc(100% + 8px); right: 12px; z-index: 70;
+    flex-direction: column; align-items: stretch; gap: 12px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; min-width: 200px;
+    box-shadow: 0 18px 40px -18px rgba(var(--shadow) / .5);
+  }
+  .topbar-actions.open { display: flex; }
+  .topbar-actions .stat { order: 1; }
+  .topbar-actions .sync-widget { justify-content: flex-start; }
+  .topbar-actions .btn { width: 100%; }
+
+  /* Bottom tab bar — one tab per view. */
+  .bottomnav {
+    display: flex; flex: 0 0 auto;
+    background: var(--panel); border-top: 1px solid var(--line);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .bnav-btn {
+    flex: 1; background: none; border: none; color: var(--muted);
+    font-size: 11px; font-weight: 500; padding: 8px 2px; border-radius: 9px;
+    transition: color .16s, background .16s;
+  }
+  .bnav-btn:hover { color: var(--text); }
+  .bnav-btn.active { color: var(--accent); font-weight: 600; background: var(--accent-wash); }
+
+  /* Give the floating mini-player room above the tab bar. */
+  .mini-player { bottom: calc(64px + env(safe-area-inset-bottom)); }
 }

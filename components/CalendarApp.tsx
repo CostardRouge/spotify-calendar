@@ -47,11 +47,18 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
 
   const [filters, setFilters] = useState<Filters>(emptyFilters());
   const [collapsed, setCollapsed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // The view is owned by the route (/month, /week, …), so it's known before the
   // first paint — no post-mount correction, no flash of the wrong view.
   const [view, setView] = useState<ViewMode>(initialView);
   const [anchor, setAnchor] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // `anchor` (and the grid's "today" marker) depend on the current date, which
+  // differs between the static server render and the client. Hold back the
+  // date-dependent UI until after mount so the first client render matches the
+  // server HTML, then reveal the real dates.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Point the calendar at the most recent save, once, when data first appears.
   const initedRef = useRef(false);
@@ -103,6 +110,20 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
 
   const filtered = useMemo(() => filterAlbums(items, filters), [items, filters]);
   const months = useMemo(() => activeMonths(items), [items]);
+  // Group active months under their year so the picker can render <optgroup>s:
+  // year headings, with the months that have saves listed beneath each.
+  const monthsByYear = useMemo(() => {
+    const groups: { year: number; months: number[] }[] = [];
+    for (const [y, m] of months) {
+      let g = groups[groups.length - 1];
+      if (!g || g.year !== y) {
+        g = { year: y, months: [] };
+        groups.push(g);
+      }
+      g.months.push(m);
+    }
+    return groups;
+  }, [months]);
   const likedSongs = useMemo(
     () => items.filter((i) => i.kind === "track").length,
     [items],
@@ -176,13 +197,23 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
           ))}
         </nav>
         <div className="spacer" />
-        <SyncWidget />
-        <div className="stat">
-          <b>{filtered.length}</b> of {items.length}
-        </div>
-        <button className="btn" onClick={logout}>
-          Log out
+        <button
+          className="btn icon settings-btn"
+          onClick={() => setSettingsOpen((o) => !o)}
+          aria-expanded={settingsOpen}
+          title="Options"
+        >
+          ⚙
         </button>
+        <div className={"topbar-actions" + (settingsOpen ? " open" : "")}>
+          <SyncWidget />
+          <div className="stat">
+            <b>{filtered.length}</b> of {items.length}
+          </div>
+          <button className="btn" onClick={logout}>
+            Log out
+          </button>
+        </div>
       </header>
 
       <main className="main">
@@ -200,24 +231,30 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
                 <button className="btn icon" onClick={() => step(-1)}>
                   ‹
                 </button>
-                <div className="month-label">{headerLabel()}</div>
+                <div className="month-label">{mounted ? headerLabel() : ""}</div>
                 <button className="btn icon" onClick={() => step(1)}>
                   ›
                 </button>
-                <select
-                  value={`${anchor.getFullYear()}-${anchor.getMonth()}`}
-                  onChange={(e) => {
-                    const [y, m] = e.target.value.split("-").map(Number);
-                    setAnchor(new Date(y, m, 1));
-                  }}
-                  title="Jump to a month with saved items"
-                >
-                  {months.map(([y, m]) => (
-                    <option key={`${y}-${m}`} value={`${y}-${m}`}>
-                      {MONTHS[m]} {y}
-                    </option>
-                  ))}
-                </select>
+                {mounted && (
+                  <select
+                    value={`${anchor.getFullYear()}-${anchor.getMonth()}`}
+                    onChange={(e) => {
+                      const [y, m] = e.target.value.split("-").map(Number);
+                      setAnchor(new Date(y, m, 1));
+                    }}
+                    title="Jump to a month with saved items"
+                  >
+                    {monthsByYear.map((g) => (
+                      <optgroup key={g.year} label={String(g.year)}>
+                        {g.months.map((m) => (
+                          <option key={`${g.year}-${m}`} value={`${g.year}-${m}`}>
+                            {MONTHS[m]}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                )}
                 <button className="btn" onClick={() => setAnchor(new Date(latestDate))}>
                   Latest
                 </button>
@@ -247,7 +284,7 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
               </div>
             ) : (
               <>
-                {view === "month" && (
+                {mounted && view === "month" && (
                   <Calendar
                     albums={filtered}
                     year={anchor.getFullYear()}
@@ -255,11 +292,11 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
                     onSelectDay={setSelectedDay}
                   />
                 )}
-                {view === "week" && (
+                {mounted && view === "week" && (
                   <WeekView albums={filtered} anchor={anchor} onSelectDay={setSelectedDay} />
                 )}
-                {view === "day" && <DayView albums={filtered} anchor={anchor} />}
-                {view === "year" && (
+                {mounted && view === "day" && <DayView albums={filtered} anchor={anchor} />}
+                {mounted && view === "year" && (
                   <YearView
                     albums={filtered}
                     year={anchor.getFullYear()}
@@ -279,6 +316,18 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
           </div>
         </section>
       </main>
+
+      <nav className="bottomnav">
+        {VIEWS.map((v) => (
+          <button
+            key={v.id}
+            className={"bnav-btn" + (view === v.id ? " active" : "")}
+            onClick={() => setView(v.id)}
+          >
+            {v.label}
+          </button>
+        ))}
+      </nav>
 
       {selectedDay && dayAlbums.length > 0 && (
         <DayModal

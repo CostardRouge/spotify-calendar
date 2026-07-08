@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { Album } from "@/lib/types";
 import { keyOf } from "@/lib/dates";
+import { playItem, itemToUri } from "@/lib/playerClient";
 
 /** Detailed single-day view listing every album added that day. */
 export default function DayView({
@@ -33,15 +34,32 @@ export default function DayView({
           <div className="day-view-grid">
             {list.map((al) => (
               <div className="dv-card" key={al.id}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={al.cover}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  onError={(e) => (e.currentTarget.style.visibility = "hidden")}
-                />
-                <div className="dv-name">{al.name}</div>
+                <div className="dv-cover">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={al.cover}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+                  />
+                  <button
+                    className="dv-play"
+                    title={al.kind === "track" ? "Play song" : "Play album"}
+                    aria-label="Play on Spotify"
+                    onClick={() =>
+                      al.kind === "track"
+                        ? playItem({ uris: [itemToUri(al.id, "track")] })
+                        : playItem({ contextUri: itemToUri(al.id, "album") })
+                    }
+                  >
+                    ▶
+                  </button>
+                </div>
+                <div className="dv-name">
+                  {al.kind === "track" && <span className="kind-tag">♪</span>}
+                  {al.name}
+                </div>
                 <div className="dv-artist">
                   {al.artists.map((a) => a.name).join(", ")}
                 </div>

@@ -1,0 +1,34 @@
+# Home Lab stack (Dell OptiPlex) — optimized standalone image with healthcheck.
+# Usage: make prod-up   (or: docker compose -f docker-compose.prod.yml up -d)
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spotify-calendar:latest
+    container_name: spotify-calendar
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - CACHE_DIR=/app/.cache
+    volumes:
+      - cache:/app/.cache # persist the library cache across restarts
+    restart: unless-stopped
+    healthcheck:
+      test:
+        ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  cache:

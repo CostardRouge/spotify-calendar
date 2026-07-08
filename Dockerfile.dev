@@ -1,0 +1,15 @@
+# Local development image: hot-reload via `next dev`.
+# Source is bind-mounted by docker-compose, so we only need dependencies here.
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies first for better layer caching.
+COPY package.json package-lock.json* ./
+RUN npm install
+
+EXPOSE 3000
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+CMD ["npm", "run", "dev"]

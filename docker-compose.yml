@@ -1,0 +1,20 @@
+# Local development stack — hot reload with source bind-mounted.
+# Usage: make up   (or: docker compose up)
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: spotify-calendar-dev
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true # reliable file watching inside Docker
+    volumes:
+      - .:/app # live source
+      - /app/node_modules # keep container's node_modules
+      - /app/.next # keep container's build cache
+    restart: unless-stopped

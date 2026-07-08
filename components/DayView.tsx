@@ -1,0 +1,55 @@
+"use client";
+
+import { useMemo } from "react";
+import type { Album } from "@/lib/types";
+import { keyOf, formatDay } from "@/lib/dates";
+
+/** Detailed single-day view listing every album added that day. */
+export default function DayView({
+  albums,
+  anchor,
+}: {
+  albums: Album[];
+  anchor: Date;
+}) {
+  const key = keyOf(anchor);
+  const list = useMemo(
+    () =>
+      albums
+        .filter((a) => a.dateKey === key)
+        .sort((a, b) => +new Date(b.addedAt) - +new Date(a.addedAt)),
+    [albums, key],
+  );
+
+  return (
+    <div className="day-view">
+      <h2 className="day-view-title">{formatDay(key)}</h2>
+      {list.length === 0 ? (
+        <p className="day-view-empty">No albums added on this day.</p>
+      ) : (
+        <>
+          <p className="day-view-sub">
+            {list.length} album{list.length > 1 ? "s" : ""} saved
+          </p>
+          <div className="day-view-grid">
+            {list.map((al) => (
+              <div className="dv-card" key={al.id}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={al.cover}
+                  alt=""
+                  onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+                />
+                <div className="dv-name">{al.name}</div>
+                <div className="dv-artist">
+                  {al.artists.map((a) => a.name).join(", ")}
+                </div>
+                <div className="dv-year">{al.year ?? ""}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

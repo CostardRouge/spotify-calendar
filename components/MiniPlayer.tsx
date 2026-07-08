@@ -17,6 +17,7 @@ const POLL_MS = 5000;
 
 const ERROR_TEXT: Record<PlayerErrorKind, string> = {
   unauthorized: "Session expired — please sign in again.",
+  reauth_required: "Reconnect Spotify to enable playback (sign out and back in).",
   premium_required: "Playback control requires Spotify Premium.",
   no_active_device: "No active Spotify device.",
   rate_limited: "Spotify is rate-limiting — try again shortly.",
@@ -42,6 +43,15 @@ export default function MiniPlayer() {
       const res = await fetch("/api/player", { cache: "no-store" });
       if (res.status === 401) {
         setState(null);
+        // Distinguish scope drift (grant missing playback scopes) from a plain
+        // expired session, so the user is told to reconnect rather than staring
+        // at an empty player.
+        try {
+          const kind = (await res.json())?.error as PlayerErrorKind | undefined;
+          if (kind === "reauth_required") setError(ERROR_TEXT.reauth_required);
+        } catch {
+          /* ignore */
+        }
         return;
       }
       if (!res.ok) return;

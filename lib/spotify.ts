@@ -49,11 +49,18 @@ export async function refreshAccessToken(
     body,
     cache: "no-store",
   });
-  console.log(`[SYNC-DEBUG] token refresh -> ${res.status} in ${Date.now() - __t0}ms`);
   if (!res.ok) {
+    console.log(`[SYNC-DEBUG] token refresh -> ${res.status} in ${Date.now() - __t0}ms`);
     throw new Error(`Token refresh failed (${res.status}): ${await res.text()}`);
   }
-  return res.json();
+  const tokens: SpotifyTokens = await res.json();
+  // Log the granted scope: a refresh echoes the scopes the *refresh token* was
+  // minted with. If playback scopes are absent here, that's the scope-drift
+  // cause of the /me/player 401s.
+  console.log(
+    `[SYNC-DEBUG] token refresh -> ${res.status} in ${Date.now() - __t0}ms scope="${tokens.scope ?? ""}"`,
+  );
+  return tokens;
 }
 
 const MAX_RETRIES = 4; // for 5xx / network errors

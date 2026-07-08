@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeTokenCookies } from "@/lib/auth";
-import { resolveAccessToken } from "@/lib/session";
+import { resolveAccessToken, SCOPE_PLAYBACK_MODIFY } from "@/lib/session";
 import { transferPlayback } from "@/lib/spotify";
-import { mapPlayerError } from "@/lib/playerErrors";
+import { mapPlayerError, scopeGuard } from "@/lib/playerErrors";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
@@ -16,6 +16,8 @@ export async function POST(req: NextRequest) {
   if (!auth) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  const guard = scopeGuard(auth.scope, [SCOPE_PLAYBACK_MODIFY]);
+  if (guard) return guard;
   let deviceId = "";
   let play = true;
   try {

@@ -44,5 +44,6 @@ export const COOKIE = {
   access: "sp_access",
   refresh: "sp_refresh",
   expires: "sp_expires",
+  scope: "sp_scope",
   state: "sp_state",
 };

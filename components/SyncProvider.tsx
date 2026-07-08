@@ -105,22 +105,28 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
 
   // Hydrate from storage on mount — never auto-start.
   useEffect(() => {
-    const snap = loadSnapshot();
-    if (snap?.items?.length) setItems(snap.items);
-    const stored = loadJob();
-    if (stored) {
-      // A job that was "running" when the app closed was interrupted.
-      if (stored.status === "running") {
-        stored.status = "paused";
-        stored.logs = [
-          ...(stored.logs ?? []),
-          { ts: Date.now(), level: "warn", message: "Interrupted — resume to continue." },
-        ];
+    let cancelled = false;
+    (async () => {
+      const snap = await loadSnapshot();
+      if (!cancelled && snap?.items?.length) setItems(snap.items);
+      const stored = loadJob();
+      if (stored) {
+        // A job that was "running" when the app closed was interrupted.
+        if (stored.status === "running") {
+          stored.status = "paused";
+          stored.logs = [
+            ...(stored.logs ?? []),
+            { ts: Date.now(), level: "warn", message: "Interrupted — resume to continue." },
+          ];
+        }
+        jobRef.current = stored;
+        if (!cancelled) setJobState(stored);
       }
-      jobRef.current = stored;
-      setJobState(stored);
-    }
-    setHydrated(true);
+      if (!cancelled) setHydrated(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -128,7 +134,8 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
 
   const persistSnapshot = useCallback(() => {
     const tracks = itemsRef.current.filter((i) => i.kind === "track").length;
-    saveSnapshot(itemsRef.current, tracks);
+    // Fire-and-forget: the async IndexedDB write must not block the sync loop.
+    void saveSnapshot(itemsRef.current, tracks).catch(() => {});
   }, []);
 
   const appendUnique = useCallback(

@@ -52,6 +52,10 @@ export default function DayModal({
               <img
                 src={al.cover}
                 alt=""
+                width={52}
+                height={52}
+                loading="lazy"
+                decoding="async"
                 onError={(e) => (e.currentTarget.style.display = "none")}
               />
               <div className="meta">

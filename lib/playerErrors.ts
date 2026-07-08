@@ -1,5 +1,26 @@
 import { NextResponse } from "next/server";
 import { noteRateLimit } from "./rateLimit";
+import { missingScopes } from "./session";
+
+/**
+ * Guard a player route against "scope drift": if the granted scope is known and
+ * is missing a scope the endpoint needs, short-circuit with a `reauth_required`
+ * response instead of calling Spotify (which would 401) and triggering an
+ * endless refresh loop. Returns null when the scopes are present or unknown.
+ */
+export function scopeGuard(granted: string, required: string[]): NextResponse | null {
+  const missing = missingScopes(granted, required);
+  if (!missing.length) return null;
+  return NextResponse.json(
+    {
+      error: "reauth_required",
+      detail:
+        "Reconnect Spotify to grant playback access (log out and back in).",
+      missing,
+    },
+    { status: 401 },
+  );
+}
 
 /**
  * Map an error thrown by the Spotify player helpers to a friendly JSON

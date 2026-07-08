@@ -49,6 +49,10 @@ export default function WeekView({
                 <img
                   src={al.cover}
                   alt=""
+                  width={38}
+                  height={38}
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => (e.currentTarget.style.display = "none")}
                 />
                 <span className="wi-text">

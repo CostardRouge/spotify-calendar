@@ -9,6 +9,7 @@
 
 export type PlayerErrorKind =
   | "unauthorized"
+  | "reauth_required"
   | "premium_required"
   | "no_active_device"
   | "rate_limited"

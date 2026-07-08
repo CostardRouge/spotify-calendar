@@ -38,6 +38,8 @@ export default function DayView({
                 <img
                   src={al.cover}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => (e.currentTarget.style.visibility = "hidden")}
                 />
                 <div className="dv-name">{al.name}</div>

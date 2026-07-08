@@ -1,13 +1,13 @@
 import { emptyFilters, type Filters, type Kind } from "./library";
-import type { ViewMode } from "./dates";
 
-const VIEWS: ViewMode[] = ["month", "week", "day", "year", "list", "stats"];
 const KINDS: Kind[] = ["album", "track"];
 const isDateKey = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 
-/** The slice of app state we reflect in the URL. */
+/**
+ * The slice of app state we reflect in the URL *query string*.
+ * The view is not here — it lives in the path (/month, /week, …).
+ */
 export interface UrlState {
-  view: ViewMode;
   anchorKey: string | null; // YYYY-MM-DD; null for views without navigation
   filters: Filters;
   collapsed: boolean;
@@ -16,7 +16,6 @@ export interface UrlState {
 /** Serialize state into query params, omitting anything at its default. */
 export function stateToSearch(s: UrlState): string {
   const p = new URLSearchParams();
-  if (s.view !== "month") p.set("view", s.view);
   if (s.anchorKey) p.set("d", s.anchorKey);
 
   const f = s.filters;
@@ -37,9 +36,6 @@ export function stateToSearch(s: UrlState): string {
 export function searchToState(search: string): Partial<UrlState> {
   const p = new URLSearchParams(search);
   const out: Partial<UrlState> = {};
-
-  const view = p.get("view");
-  if (view && (VIEWS as string[]).includes(view)) out.view = view as ViewMode;
 
   const d = p.get("d");
   if (d && isDateKey(d)) out.anchorKey = d;

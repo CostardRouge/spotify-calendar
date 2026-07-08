@@ -19,6 +19,11 @@ export async function GET() {
     scope: config.scopes,
     redirect_uri: config.redirectUri,
     state,
+    // Force the consent screen so a returning user whose prior grant predates a
+    // newly-added scope re-approves it. Without this, Spotify may silently
+    // reuse the old (narrower) grant, and refreshed tokens keep 401-ing on the
+    // newly-scoped endpoints ("scope drift").
+    show_dialog: "true",
   });
 
   const res = NextResponse.redirect(

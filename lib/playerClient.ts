@@ -71,6 +71,39 @@ export async function playItem(req: PlayRequest): Promise<boolean> {
   return false;
 }
 
+/**
+ * Add item(s) to the current playback queue. Same event contract as playItem:
+ * on "no active device" it dispatches `player:needdevice` (so the MiniPlayer can
+ * show the picker); other failures dispatch `player:error`. Returns true on
+ * success. Callers should only queue when something is already playing —
+ * otherwise start playback with playItem instead.
+ */
+export async function queueItem(req: PlayRequest): Promise<boolean> {
+  const res = await post("/api/player/queue", req);
+  if (res.ok) {
+    window.dispatchEvent(new CustomEvent("player:changed"));
+    return true;
+  }
+
+  let kind: PlayerErrorKind = "player_failed";
+  try {
+    kind = (await res.json())?.error ?? kind;
+  } catch {
+    /* ignore */
+  }
+
+  if (kind === "no_active_device") {
+    window.dispatchEvent(
+      new CustomEvent<PlayRequest>("player:needdevice", { detail: req }),
+    );
+  } else {
+    window.dispatchEvent(
+      new CustomEvent<PlayerErrorKind>("player:error", { detail: kind }),
+    );
+  }
+  return false;
+}
+
 export const pausePlayback = () => post("/api/player/pause");
 export const resumePlayback = () => post("/api/player/play");
 export const nextTrack = () => post("/api/player/next");
@@ -79,4 +112,14 @@ export const previousTrack = () => post("/api/player/previous");
 /** Open the native Spotify app at a given URI (deep-link fallback). */
 export function deepLinkToSpotify(uri: string): void {
   window.location.href = uri;
+}
+
+/**
+ * Web link to an item's detail page. Opens the Spotify app at that album/song
+ * if installed, otherwise the web player. Track ids carry a "t_" prefix in the
+ * library to avoid colliding with album ids — strip it for the URL.
+ */
+export function spotifyUrl(id: string, kind: "album" | "track"): string {
+  const bare = kind === "track" ? id.replace(/^t_/, "") : id;
+  return `https://open.spotify.com/${kind}/${bare}`;
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { PlaybackState, Device } from "@/lib/spotify";
+import { useEffect, useRef, useState } from "react";
+import type { Device } from "@/lib/spotify";
+import { usePlayback } from "@/components/PlaybackProvider";
 import {
   type PlayRequest,
   type PlayerErrorKind,
@@ -13,8 +14,6 @@ import {
   deepLinkToSpotify,
 } from "@/lib/playerClient";
 
-const POLL_MS = 5000;
-
 const ERROR_TEXT: Record<PlayerErrorKind, string> = {
   unauthorized: "Session expired — please sign in again.",
   reauth_required: "Reconnect Spotify to enable playback (sign out and back in).",
@@ -25,7 +24,9 @@ const ERROR_TEXT: Record<PlayerErrorKind, string> = {
 };
 
 export default function MiniPlayer() {
-  const [state, setState] = useState<PlaybackState | null>(null);
+  // Playback state comes from the shared provider (single poll for the whole
+  // app). We keep the setter so play/pause can update optimistically.
+  const { state, setState, refresh } = usePlayback();
   const [error, setError] = useState<string | null>(null);
   const [devices, setDevices] = useState<Device[] | null>(null);
   const [pendingReq, setPendingReq] = useState<PlayRequest | null>(null);
@@ -38,57 +39,14 @@ export default function MiniPlayer() {
     playing: false,
   });
 
-  const refresh = useCallback(async () => {
-    try {
-      const res = await fetch("/api/player", { cache: "no-store" });
-      if (res.status === 401) {
-        setState(null);
-        // Distinguish scope drift (grant missing playback scopes) from a plain
-        // expired session, so the user is told to reconnect rather than staring
-        // at an empty player.
-        try {
-          const kind = (await res.json())?.error as PlayerErrorKind | undefined;
-          if (kind === "reauth_required") setError(ERROR_TEXT.reauth_required);
-        } catch {
-          /* ignore */
-        }
-        return;
-      }
-      if (!res.ok) return;
-      const { state: s } = (await res.json()) as { state: PlaybackState | null };
-      setState(s);
-      baseRef.current = {
-        progressMs: s?.progressMs ?? 0,
-        at: Date.now(),
-        playing: !!s?.isPlaying,
-      };
-    } catch {
-      /* transient — keep last state */
-    }
-  }, []);
-
-  // Poll while the tab is visible.
+  // Re-anchor the smooth-progress base whenever fresh state lands from the poll.
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
-    const startPolling = () => {
-      if (timer) return;
-      refresh();
-      timer = setInterval(refresh, POLL_MS);
+    baseRef.current = {
+      progressMs: state?.progressMs ?? 0,
+      at: Date.now(),
+      playing: !!state?.isPlaying,
     };
-    const stopPolling = () => {
-      if (timer) clearInterval(timer);
-      timer = null;
-    };
-    const onVis = () =>
-      document.visibilityState === "visible" ? startPolling() : stopPolling();
-
-    startPolling();
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      stopPolling();
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, [refresh]);
+  }, [state]);
 
   // Smooth progress bar: re-render ~2x/sec; actual value computed from baseRef.
   useEffect(() => {
@@ -96,9 +54,8 @@ export default function MiniPlayer() {
     return () => clearInterval(id);
   }, []);
 
-  // React to events from playerClient (play buttons elsewhere in the app).
+  // React to events from playerClient (play/queue buttons elsewhere in the app).
   useEffect(() => {
-    const onChanged = () => setTimeout(refresh, 400);
     const onNeedDevice = (e: Event) => {
       const detail = (e as CustomEvent<PlayRequest>).detail;
       setPendingReq(detail ?? null);
@@ -108,16 +65,14 @@ export default function MiniPlayer() {
       const kind = (e as CustomEvent<PlayerErrorKind>).detail;
       setError(ERROR_TEXT[kind] ?? ERROR_TEXT.player_failed);
     };
-    window.addEventListener("player:changed", onChanged);
     window.addEventListener("player:needdevice", onNeedDevice);
     window.addEventListener("player:error", onError);
     return () => {
-      window.removeEventListener("player:changed", onChanged);
       window.removeEventListener("player:needdevice", onNeedDevice);
       window.removeEventListener("player:error", onError);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refresh]);
+  }, []);
 
   async function openDevicePicker() {
     setError(null);

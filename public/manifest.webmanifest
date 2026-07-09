@@ -1,0 +1,41 @@
+{
+  "name": "Spotify Library Calendar",
+  "short_name": "Library Cal",
+  "description": "Browse your saved Spotify albums on a warm, editorial calendar — grouped by the day you added each one, filtered by year, artist and genre.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#efe9dd",
+  "theme_color": "#b0532f",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["music", "lifestyle", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

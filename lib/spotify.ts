@@ -298,6 +298,44 @@ export async function play(
   );
 }
 
+/**
+ * Add a single track/episode uri to the end of the playback queue. Requires an
+ * active device (Spotify returns 404 NO_ACTIVE_DEVICE otherwise) and Premium.
+ */
+export async function queue(
+  token: string,
+  uri: string,
+  deviceId?: string,
+): Promise<void> {
+  const params = new URLSearchParams({ uri });
+  if (deviceId) params.set("device_id", deviceId);
+  await apiSend("POST", `/me/player/queue?${params.toString()}`, token);
+}
+
+/**
+ * All track uris for an album, in track order (paginated). Used to enqueue a
+ * whole album, since the queue endpoint only accepts one track uri at a time.
+ */
+export async function getAlbumTrackUris(
+  token: string,
+  albumId: string,
+): Promise<string[]> {
+  const uris: string[] = [];
+  let offset = 0;
+  const limit = 50;
+  while (true) {
+    const d: any = await apiGet(
+      `/albums/${albumId}/tracks?limit=${limit}&offset=${offset}`,
+      token,
+    );
+    const items = d?.items ?? [];
+    for (const t of items) if (t?.uri) uris.push(t.uri);
+    if (!d?.next || items.length === 0) break;
+    offset += limit;
+  }
+  return uris;
+}
+
 export async function pause(token: string, deviceId?: string): Promise<void> {
   const query = deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : "";
   await apiSend("PUT", `/me/player/pause${query}`, token);

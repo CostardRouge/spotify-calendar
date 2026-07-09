@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import type { Album } from "@/lib/types";
 import { keyOf } from "@/lib/dates";
-import { playItem, itemToUri } from "@/lib/playerClient";
+import { spotifyUrl } from "@/lib/playerClient";
+import { PlayButton, QueueButton } from "@/components/PlayQueueButton";
 
 /** Detailed single-day view listing every album added that day. */
 export default function DayView({
@@ -43,22 +44,20 @@ export default function DayView({
                     decoding="async"
                     onError={(e) => (e.currentTarget.style.visibility = "hidden")}
                   />
-                  <button
-                    className="dv-play"
-                    title={al.kind === "track" ? "Play song" : "Play album"}
-                    aria-label="Play on Spotify"
-                    onClick={() =>
-                      al.kind === "track"
-                        ? playItem({ uris: [itemToUri(al.id, "track")] })
-                        : playItem({ contextUri: itemToUri(al.id, "album") })
-                    }
-                  >
-                    ▶
-                  </button>
+                  <QueueButton item={al} className="dv-queue" />
+                  <PlayButton item={al} className="dv-play" />
                 </div>
                 <div className="dv-name">
                   {al.kind === "track" && <span className="kind-tag">♪</span>}
-                  {al.name}
+                  <a
+                    className="al-link"
+                    href={spotifyUrl(al.id, al.kind)}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={`Open “${al.name}” in Spotify`}
+                  >
+                    {al.name}
+                  </a>
                 </div>
                 <div className="dv-artist">
                   {al.artists.map((a) => a.name).join(", ")}

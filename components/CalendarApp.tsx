@@ -206,10 +206,11 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
           ⚙
         </button>
         <div className={"topbar-actions" + (settingsOpen ? " open" : "")}>
-          <SyncWidget />
           <div className="stat">
-            <b>{filtered.length}</b> of {items.length}
+            <b>{filtered.length}</b> <span className="stat-sep">of</span>{" "}
+            {items.length}
           </div>
+          <SyncWidget />
           <button className="btn" onClick={logout}>
             Log out
           </button>

@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Album } from "@/lib/types";
 import { groupByDay } from "@/lib/library";
 import { formatDay } from "@/lib/dates";
-import { playItem, itemToUri } from "@/lib/playerClient";
+import { spotifyUrl } from "@/lib/playerClient";
+import { PlayButton, QueueButton } from "@/components/PlayQueueButton";
 
 /**
  * How many day-groups to mount on first paint, and how many more to reveal each
@@ -74,38 +75,38 @@ export default function ListView({ albums }: { albums: Album[] }) {
           </div>
           {g.albums.map((al) => (
             <div className="alrow" key={al.id}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={al.cover}
-                alt=""
-                width={52}
-                height={52}
-                loading="lazy"
-                decoding="async"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
+              <div className="alrow-cover">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={al.cover}
+                  alt=""
+                  width={52}
+                  height={52}
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                />
+                <PlayButton item={al} className="alrow-play" />
+              </div>
               <div className="meta">
                 <div className="n">
                   {al.kind === "track" && <span className="kind-tag">♪</span>}
-                  {al.name}
+                  <a
+                    className="al-link"
+                    href={spotifyUrl(al.id, al.kind)}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={`Open “${al.name}” in Spotify`}
+                  >
+                    {al.name}
+                  </a>
                 </div>
                 <div className="a">
                   {al.artists.map((x) => x.name).join(", ")}
                   {al.kind === "track" && al.albumName ? ` · ${al.albumName}` : ""}
                 </div>
               </div>
-              <button
-                className="alrow-play"
-                title={al.kind === "track" ? "Play song" : "Play album"}
-                aria-label="Play on Spotify"
-                onClick={() =>
-                  al.kind === "track"
-                    ? playItem({ uris: [itemToUri(al.id, "track")] })
-                    : playItem({ contextUri: itemToUri(al.id, "album") })
-                }
-              >
-                ▶
-              </button>
+              <QueueButton item={al} className="alrow-queue" />
               <div className="yr">{al.year ?? ""}</div>
             </div>
           ))}

@@ -7,6 +7,8 @@
  * listens for the resulting events to surface the device picker / errors.
  */
 
+import type { QueueState } from "@/lib/spotify";
+
 export type PlayerErrorKind =
   | "unauthorized"
   | "reauth_required"
@@ -108,6 +110,21 @@ export const pausePlayback = () => post("/api/player/pause");
 export const resumePlayback = () => post("/api/player/play");
 export const nextTrack = () => post("/api/player/next");
 export const previousTrack = () => post("/api/player/previous");
+
+/**
+ * Read the current playback queue (now playing + up next). Returns null on any
+ * failure so callers can render an empty/error state without throwing.
+ */
+export async function fetchQueue(): Promise<QueueState | null> {
+  try {
+    const res = await fetch("/api/player/queue", { cache: "no-store" });
+    if (!res.ok) return null;
+    const { queue } = (await res.json()) as { queue: QueueState | null };
+    return queue ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /** Open the native Spotify app at a given URI (deep-link fallback). */
 export function deepLinkToSpotify(uri: string): void {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Device } from "@/lib/spotify";
+import type { Device, QueueState, QueueTrack } from "@/lib/spotify";
 import { usePlayback } from "@/components/PlaybackProvider";
 import {
   type PlayRequest,
@@ -11,6 +11,7 @@ import {
   nextTrack,
   previousTrack,
   playItem,
+  fetchQueue,
   deepLinkToSpotify,
 } from "@/lib/playerClient";
 
@@ -30,6 +31,11 @@ export default function MiniPlayer() {
   const [error, setError] = useState<string | null>(null);
   const [devices, setDevices] = useState<Device[] | null>(null);
   const [pendingReq, setPendingReq] = useState<PlayRequest | null>(null);
+
+  // Queue panel: what's playing now + what's coming up.
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [queue, setQueue] = useState<QueueState | null>(null);
+  const [queueLoading, setQueueLoading] = useState(false);
 
   // Local progress ticking between polls, so the bar moves smoothly.
   const [tick, setTick] = useState(0);
@@ -76,6 +82,7 @@ export default function MiniPlayer() {
 
   async function openDevicePicker() {
     setError(null);
+    setQueueOpen(false); // don't stack the two popovers
     try {
       const res = await fetch("/api/player/devices", { cache: "no-store" });
       if (!res.ok) {
@@ -132,6 +139,38 @@ export default function MiniPlayer() {
     if (!res.ok) await handleControlError(res);
     setTimeout(refresh, 500);
   }
+
+  async function loadQueue() {
+    setQueueLoading(true);
+    const q = await fetchQueue();
+    setQueue(q);
+    setQueueLoading(false);
+  }
+
+  function toggleQueue() {
+    const next = !queueOpen;
+    setQueueOpen(next);
+    if (next) {
+      setDevices(null); // don't stack the two popovers
+      loadQueue();
+    }
+  }
+
+  // Play a queued item now. Refetch the queue immediately (rather than waiting
+  // for the poll) so the panel reflects the new now-playing without a lag.
+  async function playFromQueue(track: QueueTrack) {
+    const ok = await playItem({ uris: [track.uri] });
+    if (ok) {
+      refresh();
+      setTimeout(loadQueue, 500); // give Spotify a beat to advance the queue
+    }
+  }
+
+  // Keep an open queue panel fresh as the track advances.
+  useEffect(() => {
+    if (queueOpen) loadQueue();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.track?.id]);
 
   async function handleControlError(res: Response) {
     let kind: PlayerErrorKind = "player_failed";
@@ -213,6 +252,24 @@ export default function MiniPlayer() {
               ⏭
             </button>
             <button
+              className="mp-btn mp-queue-btn"
+              onClick={toggleQueue}
+              data-open={queueOpen ? "true" : undefined}
+              title="Queue"
+              aria-label="Show queue"
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path
+                  d="M4 7h11M4 12h11M4 17h7M16 12.5v6l4.5-3-4.5-3z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <button
               className="mp-btn mp-dev"
               onClick={openDevicePicker}
               title="Devices"
@@ -237,6 +294,49 @@ export default function MiniPlayer() {
           <button className="mp-x" onClick={() => setError(null)} aria-label="Dismiss">
             ×
           </button>
+        </div>
+      )}
+
+      {queueOpen && (
+        <div className="mp-queue">
+          <div className="mp-devices-head">
+            <span>Queue</span>
+            <button
+              className="mp-x"
+              onClick={() => setQueueOpen(false)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+          <div className="mp-queue-scroll">
+            {queueLoading && !queue ? (
+              <div className="mp-queue-empty">Loading…</div>
+            ) : queue && (queue.nowPlaying || queue.upNext.length > 0) ? (
+              <>
+                {queue.nowPlaying && (
+                  <div className="mp-queue-section">
+                    <div className="mp-queue-label">Now playing</div>
+                    <QueueRow track={queue.nowPlaying} active />
+                  </div>
+                )}
+                {queue.upNext.length > 0 && (
+                  <div className="mp-queue-section">
+                    <div className="mp-queue-label">Up next</div>
+                    {queue.upNext.map((t, i) => (
+                      <QueueRow
+                        key={`${t.uri}-${i}`}
+                        track={t}
+                        onPlay={playFromQueue}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="mp-queue-empty">Nothing in the queue</div>
+            )}
+          </div>
         </div>
       )}
 
@@ -271,6 +371,52 @@ export default function MiniPlayer() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * One row in the queue panel: cover + title/artist, highlighted when active.
+ * When `onPlay` is provided, hovering the cover reveals a play button that
+ * starts that item immediately.
+ */
+function QueueRow({
+  track,
+  active,
+  onPlay,
+}: {
+  track: QueueTrack;
+  active?: boolean;
+  onPlay?: (track: QueueTrack) => void;
+}) {
+  return (
+    <div className="mp-queue-row" data-active={active ? "true" : undefined}>
+      <div className="mp-queue-cover-wrap">
+        {track.cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="mp-queue-cover" src={track.cover} alt="" />
+        ) : (
+          <div className="mp-queue-cover mp-cover-empty" />
+        )}
+        {onPlay && (
+          <button
+            className="mp-queue-play"
+            title="Play now"
+            aria-label={`Play ${track.name} now`}
+            onClick={() => onPlay(track)}
+          >
+            ▶
+          </button>
+        )}
+      </div>
+      <div className="mp-queue-info">
+        <div className="mp-queue-name" title={track.name}>
+          {track.name}
+        </div>
+        <div className="mp-queue-artist" title={track.artists}>
+          {track.artists}
+        </div>
+      </div>
     </div>
   );
 }

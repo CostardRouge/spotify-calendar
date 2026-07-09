@@ -265,6 +265,60 @@ export async function getPlaybackState(
   };
 }
 
+/** A single item in the playback queue (track or podcast episode). */
+export interface QueueTrack {
+  id: string;
+  name: string;
+  artists: string;
+  album: string;
+  cover: string;
+  uri: string;
+}
+
+/**
+ * The playback queue as Spotify exposes it: the currently-playing item plus a
+ * flat "up next" list. Note the Web API does NOT distinguish user-queued items
+ * from context-continuation items — they arrive in one array — and it offers no
+ * "previously played" here, so we only surface Now Playing + Up Next.
+ */
+export interface QueueState {
+  nowPlaying: QueueTrack | null;
+  upNext: QueueTrack[];
+}
+
+/** Normalize a raw queue item (track or episode) into a QueueTrack. */
+function toQueueTrack(t: any): QueueTrack | null {
+  if (!t) return null;
+  const imgs = t.album?.images ?? t.images ?? t.show?.images ?? [];
+  // Smallest image is last; fine for a compact list row.
+  const cover = imgs.length ? imgs[imgs.length - 1]?.url ?? "" : "";
+  const artists = t.artists?.length
+    ? t.artists.map((a: any) => a.name).join(", ")
+    : t.show?.name ?? "";
+  return {
+    id: t.id ?? "",
+    name: t.name ?? "",
+    artists,
+    album: t.album?.name ?? t.show?.name ?? "",
+    cover,
+    uri: t.uri ?? "",
+  };
+}
+
+/**
+ * Current playback queue: GET /me/player/queue. Requires playback-read scope.
+ * Returns empty state when nothing is active.
+ */
+export async function getQueue(token: string): Promise<QueueState> {
+  const d: any = await apiGet("/me/player/queue", token);
+  return {
+    nowPlaying: toQueueTrack(d?.currently_playing),
+    upNext: (d?.queue ?? [])
+      .map(toQueueTrack)
+      .filter(Boolean) as QueueTrack[],
+  };
+}
+
 /** The user's available Spotify Connect devices. */
 export async function getDevices(token: string): Promise<Device[]> {
   const d: any = await apiGet("/me/player/devices", token);

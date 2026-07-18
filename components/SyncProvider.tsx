@@ -20,7 +20,10 @@ import { loadSnapshot, saveSnapshot } from "@/lib/clientCache";
 
 const PAGE = 50;
 const SNAPSHOT_EVERY_PAGES = 5;
-const GENRE_CHUNK = 400;
+// Artist genres now resolve one request per artist (Spotify removed the bulk
+// /artists?ids= endpoint in Feb 2026), so keep each /api/genres POST small
+// enough that a chunk comfortably finishes inside the route's 120s budget.
+const GENRE_CHUNK = 200;
 
 /** Human-readable "come back later" message for an active cooldown. */
 function rateLimitMsg(until: number): string {

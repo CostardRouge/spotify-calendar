@@ -495,30 +495,46 @@ export async function fetchTracksPage(
 
 /**
  * Fetch genres for a set of artist ids (Spotify tags genres on artists, not
- * albums/tracks). Returns a map artistId -> genres. Best-effort per batch.
+ * albums/tracks). Returns a map artistId -> genres. Best-effort per artist.
+ *
+ * IMPORTANT (Spotify Web API change, Feb 6 2026): the bulk "Get Several Artists"
+ * endpoint (GET /artists?ids=...) was REMOVED. Calling it now fails, and because
+ * this helper treats non-401/429 errors as non-fatal, that failure used to be
+ * swallowed — leaving *every* artist ungenred so the sync finished "done" with a
+ * completely empty genre filter. We now resolve genres via the still-supported
+ * single-artist endpoint GET /artists/{id}, one request per artist. The
+ * per-artist server cache (see app/api/genres/route.ts) makes repeat/overlapping
+ * lookups free, so the extra requests are only ever paid once per artist.
+ *
+ * Data caveat: Spotify is also deprecating the artist `genres` field itself, so
+ * a growing share of artists now return an empty array even on a successful
+ * request. That is a source-data limitation, not an error — those artists simply
+ * stay ungenred, and the genre filter reflects whatever Spotify still classifies.
  */
 export async function fetchArtistGenresBatch(
   token: string,
   ids: string[],
 ): Promise<Record<string, string[]>> {
   const map: Record<string, string[]> = {};
-  for (let i = 0; i < ids.length; i += 50) {
-    const batch = ids.slice(i, i + 50).filter(Boolean);
-    if (!batch.length) continue;
-    // Gentle pacing between chunks. A large library resolves thousands of
-    // artists, and firing every /artists request back-to-back reliably trips
-    // Spotify's rolling rate window — which used to come back as a throttled,
-    // silently-dropped chunk (i.e. no genres at all). Stay under the window.
-    if (i > 0) await sleep(120);
+  const unique = [...new Set(ids.filter(Boolean))];
+  for (let i = 0; i < unique.length; i++) {
+    const id = unique[i];
+    // Gentle pacing between per-artist calls. Resolving a large library is now
+    // one request per artist, so firing them back-to-back reliably trips
+    // Spotify's rolling rate window. Stay comfortably under it.
+    if (i > 0) await sleep(80);
     try {
-      const d: any = await apiGet("/artists?ids=" + batch.join(","), token);
-      for (const a of d.artists ?? []) if (a) map[a.id] = a.genres ?? [];
+      const a: any = await apiGet("/artists/" + encodeURIComponent(id), token);
+      // Key by the *requested* id (the /api/genres route looks results up by the
+      // id it asked for); relinked responses could carry a different a.id.
+      map[id] = Array.isArray(a?.genres) ? a.genres : [];
     } catch (e) {
-      // A rate limit must NOT be swallowed: doing so returns empty genres for
-      // the whole run and marks the sync "done" with an empty genre filter.
+      // A rate limit / auth failure must NOT be swallowed: doing so returns empty
+      // genres for the run and marks the sync "done" with an empty genre filter.
       // Surface it so the caller can back off and let the user resume.
       if ((e as any)?.status === 429 || (e as any)?.status === 401) throw e;
-      // Other transient errors stay non-fatal: leave those artists ungenred.
+      // Other transient errors (e.g. a 404 for a stale/relinked artist id) stay
+      // non-fatal: leave that artist ungenred and continue.
     }
   }
   return map;

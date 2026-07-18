@@ -1,11 +1,12 @@
 # Home Lab stack (Dell OptiPlex) — optimized standalone image with healthcheck.
-# Usage: make prod-up   (or: docker compose -f docker-compose.prod.yml up -d)
+# Image is built & published by .github/workflows/docker-build.yml on every
+# push to main, so this pulls from GHCR instead of building locally.
+# If the GitHub repo/package is private, run once on the host:
+#   docker login ghcr.io -u <github-username> -p <PAT with read:packages>
+# Usage: make prod-pull && make prod-up   (or: docker compose -f docker-compose.prod.yml pull && up -d)
 services:
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: spotify-calendar:latest
+  spotify-calendar:
+    image: ghcr.io/costardrouge/spotify-calendar:latest
     container_name: spotify-calendar
     ports:
       - "${APP_PORT:-3000}:3000"
@@ -15,7 +16,7 @@ services:
       - NODE_ENV=production
       - CACHE_DIR=/app/.cache
     volumes:
-      - cache:/app/.cache # persist the library cache across restarts
+      - spotify-calendar-data:/app/.cache # persist the library cache across restarts
     restart: unless-stopped
     healthcheck:
       test:
@@ -31,4 +32,4 @@ services:
         max-file: "3"
 
 volumes:
-  cache:
+  spotify-calendar-data:

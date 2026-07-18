@@ -66,9 +66,12 @@ shell: ## Open a shell inside the dev container
 	$(DC) exec web sh
 
 # ---- Home Lab / production --------------------------------------------------
-.PHONY: prod-build
-prod-build: ## Build the optimized standalone image
-	$(DC_PROD) build
+# The image is built & published to GHCR by .github/workflows/docker-build.yml
+# on every push to main — the Home Lab stack pulls it rather than building
+# locally (see docker-compose.prod.yml).
+.PHONY: prod-pull
+prod-pull: ## Pull the latest published image from GHCR
+	$(DC_PROD) pull
 
 .PHONY: prod-up
 prod-up: ## Start the Home Lab stack in the background
@@ -87,8 +90,9 @@ prod-logs: ## Follow Home Lab logs
 	$(DC_PROD) logs -f
 
 .PHONY: prod-deploy
-prod-deploy: ## Rebuild and (re)start the Home Lab stack
-	$(DC_PROD) up -d --build
+prod-deploy: ## Pull the latest image and (re)start the Home Lab stack
+	$(DC_PROD) pull
+	$(DC_PROD) up -d
 
 # ---- Housekeeping -----------------------------------------------------------
 .PHONY: ps
@@ -99,4 +103,4 @@ ps: ## Show running containers
 clean: ## Stop everything and remove volumes + built image
 	-$(DC) down -v
 	-$(DC_PROD) down -v
-	-docker image rm spotify-calendar:latest 2>/dev/null || true
+	-docker image rm ghcr.io/costardrouge/spotify-calendar:latest 2>/dev/null || true

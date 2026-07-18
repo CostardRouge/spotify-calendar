@@ -101,6 +101,19 @@ async function apiGet(
     throw err;
   }
 
+  // 403 on a read endpoint (e.g. GET /me/player) means the account isn't
+  // Premium — mirrors apiSend's handling of control endpoints. Without this,
+  // the error falls through to the generic branch below with no `.status`,
+  // and callers like mapPlayerError() (which only special-cases 401/403/404/429)
+  // then hit their catch-all and return a literal HTTP 502 to the browser —
+  // which is what was happening on every /api/player poll for non-Premium
+  // accounts, every 5s, forever.
+  if (res.status === 403) {
+    const err = new Error("premium_required");
+    (err as any).status = 403;
+    throw err;
+  }
+
   if (res.status === 429) {
     const retryAfter = Number(res.headers.get("Retry-After")) || 1; // seconds
     // Short bursts: wait the advertised time and retry (bounded). Long bans:

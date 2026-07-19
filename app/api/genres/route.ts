@@ -37,11 +37,18 @@ export async function POST(req: NextRequest) {
   if (missing.length) {
     try {
       const fetched = await fetchArtistGenresBatch(auth.accessToken, missing);
+      let nonEmpty = 0;
       for (const id of missing) {
         const g = fetched[id] ?? [];
+        if (g.length) nonEmpty++;
         genres[id] = g;
         setCache(`genre:${id}`, g);
       }
+      // Diagnostic: if this stays 0 across a full sync, Spotify is returning no
+      // genres at all (data-side) rather than us rate-limiting or mis-keying.
+      console.log(
+        `[GENRES] resolved ${nonEmpty}/${missing.length} artists with >=1 genre this chunk`,
+      );
     } catch (e) {
       if ((e as any)?.status === 401) {
         return NextResponse.json({ error: "unauthorized" }, { status: 401 });

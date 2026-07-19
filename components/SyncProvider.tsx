@@ -21,9 +21,15 @@ import { loadSnapshot, saveSnapshot } from "@/lib/clientCache";
 const PAGE = 50;
 const SNAPSHOT_EVERY_PAGES = 5;
 // Artist genres now resolve one request per artist (Spotify removed the bulk
-// /artists?ids= endpoint in Feb 2026), so keep each /api/genres POST small
-// enough that a chunk comfortably finishes inside the route's 120s budget.
-const GENRE_CHUNK = 200;
+// /artists?ids= endpoint in Feb 2026), so each /api/genres POST does N serial
+// Spotify calls. Keep the chunk small: when the app sits behind a proxy/CDN
+// with a fixed edge timeout (Cloudflare's Free/Pro plans cut any request at a
+// hard 100s and return their own 502), a 200-artist chunk can cross that cap
+// on a large library and get killed at the edge before the route ever
+// responds. 50 keeps each POST at ~10s — well under 100s even with pacing and
+// the occasional rate-limit back-off — and the sync is resumable/chunked, so
+// more, shorter requests just chain naturally.
+const GENRE_CHUNK = 50;
 
 /** Human-readable "come back later" message for an active cooldown. */
 function rateLimitMsg(until: number): string {
@@ -243,7 +249,10 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ artistIds: chunk }),
-        signal: AbortSignal.timeout(120000),
+        // Abort below a typical 100s CDN edge timeout so a stalled chunk fails
+        // as a clean client-side TimeoutError (resumable) rather than waiting
+        // out an opaque edge 502.
+        signal: AbortSignal.timeout(90000),
       });
       if (res.ok) {
         const { genres } = await res.json();

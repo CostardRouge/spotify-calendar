@@ -4,7 +4,12 @@ import { fetchArtistGenresBatch } from "@/lib/spotify";
 import { getCache, setCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+// Keep the route's own budget UNDER a typical 100s CDN edge timeout (e.g.
+// Cloudflare Free/Pro cut at a hard 100s and return their own 502). With the
+// small client-side GENRE_CHUNK a normal chunk finishes in ~10s; capping at 60s
+// means that in the worst case the route returns its own error the client can
+// handle/resume, instead of the proxy killing it with an opaque 502.
+export const maxDuration = 60;
 
 /**
  * POST { artistIds: string[] } -> { genres: { [artistId]: string[] } }

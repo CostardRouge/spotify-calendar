@@ -20,7 +20,7 @@ function Bar({ loaded, total }: { loaded: number; total: number | null }) {
 }
 
 export default function SyncPage() {
-  const { job, items, isRunning, start, restart, pause, cancel, clearError } =
+  const { job, items, isRunning, start, restart, refresh, pause, cancel, clearError } =
     useSync();
 
   const fmt = (ts: number | null) =>
@@ -99,6 +99,14 @@ export default function SyncPage() {
             ▶ {job.status === "paused" ? "Resume" : "Start"}
           </button>
         )}
+        <button
+          className="btn"
+          onClick={refresh}
+          disabled={isRunning || cooldownActive || items.length === 0}
+          title="Fetch only items saved since the last sync"
+        >
+          ⟳ Check for new
+        </button>
         <button className="btn" onClick={cancel} disabled={!isRunning && job.status !== "paused"}>
           ✕ Cancel
         </button>

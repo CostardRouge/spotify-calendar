@@ -25,6 +25,16 @@ const SNAPSHOT_EVERY_PAGES = 5;
 // enough that a chunk comfortably finishes inside the route's 120s budget.
 const GENRE_CHUNK = 200;
 
+// Auto-start rules, applied once per app load after hydration:
+// – a job interrupted mid-run (tab closed while "running") resumes immediately;
+// – a user-paused job resumes only after sitting idle this long, so pausing
+//   and then reloading the page doesn't fight the user;
+const AUTO_RESUME_PAUSED_AFTER_MS = 30 * 60 * 1000;
+// – a completed library this stale checks for new saves (incremental refresh).
+const AUTO_REFRESH_AFTER_MS = 60 * 60 * 1000;
+
+type RunMode = "resume" | "restart" | "refresh";
+
 /** Human-readable "come back later" message for an active cooldown. */
 function rateLimitMsg(until: number): string {
   const secs = Math.max(0, Math.ceil((until - Date.now()) / 1000));
@@ -52,6 +62,7 @@ interface SyncContextValue {
   isRunning: boolean;
   start: () => void; // resume / continue
   restart: () => void; // redo from scratch
+  refresh: () => void; // fetch only newly saved items
   pause: () => void;
   cancel: () => void;
   clearError: () => void;
@@ -106,26 +117,60 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
   const cancelRef = useRef(false);
   const [isRunning, setIsRunning] = useState(false);
 
-  // Hydrate from storage on mount — never auto-start.
+  // Action decided during hydration, fired once by the effect further below.
+  const autoStartRef = useRef<RunMode | null>(null);
+
+  // Hydrate from storage on mount, then decide whether to auto-start.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const snap = await loadSnapshot();
       if (!cancelled && snap?.items?.length) setItems(snap.items);
       const stored = loadJob();
+      const now = Date.now();
+      let auto: RunMode | null = null;
+
       if (stored) {
         // A job that was "running" when the app closed was interrupted.
         if (stored.status === "running") {
           stored.status = "paused";
           stored.logs = [
             ...(stored.logs ?? []),
-            { ts: Date.now(), level: "warn", message: "Interrupted — resume to continue." },
+            { ts: now, level: "warn", message: "Interrupted — resuming automatically." },
           ];
+          auto = "resume";
+        } else if (
+          stored.status === "paused" &&
+          now - (stored.updatedAt ?? 0) > AUTO_RESUME_PAUSED_AFTER_MS
+        ) {
+          // A long-abandoned pause (came back days later) resumes itself;
+          // a fresh, deliberate pause is respected.
+          auto = "resume";
+        } else if (
+          stored.status === "error" &&
+          stored.rateLimitedUntil &&
+          now >= stored.rateLimitedUntil
+        ) {
+          // The cooldown that stopped the last run has elapsed — pick it up.
+          auto = "resume";
+        } else if (
+          stored.status === "done" &&
+          snap?.items?.length &&
+          now - snap.ts > AUTO_REFRESH_AFTER_MS
+        ) {
+          auto = "refresh";
         }
         jobRef.current = stored;
         if (!cancelled) setJobState(stored);
+      } else if (snap?.items?.length && now - snap.ts > AUTO_REFRESH_AFTER_MS) {
+        // Library snapshot without a job record (e.g. cleared localStorage).
+        auto = "refresh";
       }
-      if (!cancelled) setHydrated(true);
+
+      if (!cancelled) {
+        autoStartRef.current = auto;
+        setHydrated(true);
+      }
     })();
     return () => {
       cancelled = true;
@@ -203,6 +248,70 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
     persistSnapshot();
   }
 
+  // Fetch only items saved since the last sync. Spotify returns /me/albums and
+  // /me/tracks newest-first, so we walk from offset 0 and stop at the first
+  // page that overlaps something we already hold. Returns how many new items
+  // were found. Cheap on an up-to-date library: usually a single page.
+  async function syncKindIncremental(kind: "album" | "track"): Promise<number> {
+    const endpoint = kind === "album" ? "/api/albums" : "/api/tracks";
+    const progressKey = kind === "album" ? "albums" : "tracks";
+    patchJob({ phase: kind === "album" ? "albums" : "tracks" });
+
+    const existing = new Set(
+      itemsRef.current.filter((i) => i.kind === kind).map((i) => i.id),
+    );
+    const fresh: Album[] = [];
+    const freshIds = new Set<string>();
+    let offset = 0;
+    let total: number | null = null;
+    // Set once the scan reaches items we already hold (or the end of the
+    // list). If we're interrupted before then, the partial batch is discarded:
+    // merging it would leave a gap between it and the items from the last
+    // sync, and a later offset-based resume would silently skip that gap.
+    let complete = false;
+
+    while (true) {
+      if (stopRequested()) break;
+      const data = await apiJson(`${endpoint}?offset=${offset}&limit=${PAGE}`, 30000);
+      total = data.total ?? total;
+      const pageItems: Album[] = data.items ?? [];
+
+      let overlap = false;
+      for (const it of pageItems) {
+        if (existing.has(it.id)) {
+          // First already-known item: everything from here on was saved
+          // before the last sync and is already in the library.
+          overlap = true;
+        } else if (!freshIds.has(it.id)) {
+          freshIds.add(it.id);
+          fresh.push(it);
+        }
+      }
+
+      if (overlap || pageItems.length === 0 || !data.next) {
+        complete = true;
+        break;
+      }
+      offset += pageItems.length;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+
+    if (!complete) return 0;
+
+    if (fresh.length) {
+      // Prepend: the library list stays newest-first.
+      setItems([...fresh, ...itemsRef.current]);
+      log(
+        "info",
+        `Found ${fresh.length} new ${kind === "album" ? "album" : "liked song"}${fresh.length === 1 ? "" : "s"}`,
+      );
+    }
+    const loaded = itemsRef.current.filter((i) => i.kind === kind).length;
+    patchJob({ [progressKey]: { loaded, total: total ?? loaded } } as any);
+    persistSnapshot();
+    return fresh.length;
+  }
+
   async function syncGenres() {
     patchJob({ phase: "genres" });
     const need = new Set<string>();
@@ -274,7 +383,7 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
     applyGenres();
   }
 
-  const run = useCallback(async (restart: boolean) => {
+  const run = useCallback(async (mode: RunMode) => {
     if (runningRef.current) return;
 
     // Pre-flight: never fire a Spotify request while a cooldown is active —
@@ -296,7 +405,7 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
     cancelRef.current = false;
     setIsRunning(true);
 
-    if (restart) {
+    if (mode === "restart") {
       setItems([]);
       jobRef.current = {
         ...initialJob(),
@@ -311,19 +420,41 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
         startedAt: jobRef.current.startedAt ?? Date.now(),
       });
     }
-    log("info", restart ? "Sync started (full)" : "Sync resumed");
+    log(
+      "info",
+      mode === "restart"
+        ? "Sync started (full)"
+        : mode === "refresh"
+          ? "Checking for new saves…"
+          : "Sync resumed",
+    );
 
     try {
-      await syncKind("album");
-      if (stopRequested()) return finishStopped();
-      await syncKind("track");
-      if (stopRequested()) return finishStopped();
+      let newCount = 0;
+      if (mode === "refresh") {
+        newCount += await syncKindIncremental("album");
+        if (stopRequested()) return finishStopped();
+        newCount += await syncKindIncremental("track");
+        if (stopRequested()) return finishStopped();
+      } else {
+        await syncKind("album");
+        if (stopRequested()) return finishStopped();
+        await syncKind("track");
+        if (stopRequested()) return finishStopped();
+      }
       await syncGenres();
       if (stopRequested()) return finishStopped();
 
       patchJob({ status: "done", phase: "done", finishedAt: Date.now() });
       persistSnapshot();
-      log("info", "Sync complete");
+      log(
+        "info",
+        mode === "refresh"
+          ? newCount
+            ? `Refresh complete — ${newCount} new item${newCount === 1 ? "" : "s"}`
+            : "Refresh complete — no new saves"
+          : "Sync complete",
+      );
     } catch (e: any) {
       if (e?.unauthorized) {
         patchJob({ status: "error", error: e.message });
@@ -366,8 +497,18 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const start = useCallback(() => run(false), [run]);
-  const restart = useCallback(() => run(true), [run]);
+  // Fire the auto-start decided at hydration (resume an interrupted run, or
+  // refresh a stale library). run() re-checks the rate-limit cooldown itself.
+  useEffect(() => {
+    if (!hydrated || !autoStartRef.current) return;
+    const mode = autoStartRef.current;
+    autoStartRef.current = null;
+    void run(mode);
+  }, [hydrated, run]);
+
+  const start = useCallback(() => run("resume"), [run]);
+  const restart = useCallback(() => run("restart"), [run]);
+  const refresh = useCallback(() => run("refresh"), [run]);
   const pause = useCallback(() => {
     if (runningRef.current) pauseRef.current = true;
   }, []);
@@ -385,7 +526,18 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
 
   return (
     <SyncContext.Provider
-      value={{ items, hydrated, job, isRunning, start, restart, pause, cancel, clearError }}
+      value={{
+        items,
+        hydrated,
+        job,
+        isRunning,
+        start,
+        restart,
+        refresh,
+        pause,
+        cancel,
+        clearError,
+      }}
     >
       {children}
     </SyncContext.Provider>

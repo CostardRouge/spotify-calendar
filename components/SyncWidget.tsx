@@ -35,7 +35,7 @@ export function phaseLabel(job: SyncJob): string {
 }
 
 export default function SyncWidget() {
-  const { job, isRunning, start, pause } = useSync();
+  const { job, isRunning, start, refresh, pause } = useSync();
   const color = STATUS_COLOR[job.status] ?? "var(--muted)";
 
   return (
@@ -52,7 +52,11 @@ export default function SyncWidget() {
         <button className="sync-mini" onClick={start} title="Resume sync">
           ▶
         </button>
-      ) : job.status === "idle" || job.status === "done" ? (
+      ) : job.status === "done" ? (
+        <button className="sync-mini" onClick={refresh} title="Check for new saves">
+          ↻
+        </button>
+      ) : job.status === "idle" ? (
         <button className="sync-mini" onClick={start} title="Start sync">
           ↻
         </button>

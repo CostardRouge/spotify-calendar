@@ -3,22 +3,25 @@ import { writeTokenCookies } from "@/lib/auth";
 import { resolveAccessToken } from "@/lib/session";
 import { fetchAlbumsPage } from "@/lib/spotify";
 import { noteRateLimit, clearRateLimit } from "@/lib/rateLimit";
+import { isDemo, demoPage } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /** One page of saved albums: /api/albums?offset=0&limit=50 */
 export async function GET(req: NextRequest) {
-  const auth = await resolveAccessToken();
-  if (!auth) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
   const offset = Math.max(0, Number(req.nextUrl.searchParams.get("offset")) || 0);
   const limit = Math.min(
     50,
     Math.max(1, Number(req.nextUrl.searchParams.get("limit")) || 50),
   );
+
+  if (isDemo()) return NextResponse.json(demoPage("album", offset, limit));
+
+  const auth = await resolveAccessToken();
+  if (!auth) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
 
   try {
     const page = await fetchAlbumsPage(auth.accessToken, offset, limit);

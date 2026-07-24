@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveAccessToken } from "@/lib/session";
 import { fetchArtistGenresBatch } from "@/lib/spotify";
 import { getCache, setCache } from "@/lib/cache";
+import { isDemo, demoGenres } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -12,6 +13,16 @@ export const maxDuration = 120;
  * (and overlapping artists across albums/tracks) are nearly free.
  */
 export async function POST(req: NextRequest) {
+  if (isDemo()) {
+    try {
+      const body = await req.json();
+      const ids = Array.isArray(body?.artistIds) ? body.artistIds.filter(Boolean) : [];
+      return NextResponse.json({ genres: demoGenres(ids) });
+    } catch {
+      return NextResponse.json({ error: "bad_request" }, { status: 400 });
+    }
+  }
+
   const auth = await resolveAccessToken();
   if (!auth) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

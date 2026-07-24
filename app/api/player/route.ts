@@ -4,12 +4,15 @@ import { resolveAccessToken, SCOPE_PLAYBACK_READ } from "@/lib/session";
 import { getPlaybackState } from "@/lib/spotify";
 import { mapPlayerError, scopeGuard } from "@/lib/playerErrors";
 import { clearRateLimit } from "@/lib/rateLimit";
+import { isDemo, demoPlayback } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
 
 /** Current playback state for the mini-player: GET /api/player */
 export async function GET() {
+  if (isDemo()) return NextResponse.json({ state: demoPlayback() });
+
   const auth = await resolveAccessToken();
   if (!auth) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { config, assertConfigured, COOKIE } from "@/lib/config";
+import { config, assertConfigured, appBaseUrl, COOKIE } from "@/lib/config";
+import { isDemo } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
 /** Kick off the Spotify Authorization Code flow. */
 export async function GET() {
+  // Demo mode has no auth — "Connect" drops straight into the app.
+  if (isDemo()) return NextResponse.redirect(new URL("/month", appBaseUrl));
+
   try {
     assertConfigured();
   } catch (e) {

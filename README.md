@@ -1,5 +1,7 @@
 # Spotify Library Calendar
 
+**[Showcase / screenshots →](https://costardrouge.github.io/spotify-calendar/)**
+
 A Next.js app that lays your **saved Spotify albums** on a monthly calendar,
 grouped by the day you added each one. Each day cell shows the album covers
 stacked, with a count badge; a collapsible side panel filters by **search,
@@ -89,6 +91,23 @@ lib/                -> config, auth cookies, Spotify client, pure filter helpers
   non-root, healthcheck) with matching Compose files.
 - **Data:** the whole saved-albums library is fetched server-side and enriched
   with genres (Spotify tags genres on artists, so a few albums may be untagged).
+
+## Demo mode & showcase page
+
+`DEMO_MODE=1` boots the app with a fixture library (real releases, synthetic
+save-dates) and no Spotify credentials — handy for trying the UI or hacking on
+it without creating a Spotify app:
+
+```bash
+DEMO_MODE=1 npm run dev     # or: add DEMO_MODE=1 to .env with Docker
+```
+
+The **GitHub Pages showcase** (`.github/workflows/pages.yml`) uses this mode:
+on every push to `main` it builds the app, boots it in demo mode, captures
+real screenshots with Playwright (`scripts/showcase-screenshots.mjs`), and
+deploys the landing page in `showcase/` to GitHub Pages. One-time setup:
+**Settings → Pages → Source: "GitHub Actions"**. Regenerate the fixture
+library with `node scripts/build-demo-library.mjs`.
 
 ## Notes
 

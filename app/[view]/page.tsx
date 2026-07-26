@@ -10,7 +10,13 @@ export function generateStaticParams() {
   return VIEWS.map((view) => ({ view }));
 }
 
-export default function ViewPage({ params }: { params: { view: string } }) {
-  if (!(VIEWS as string[]).includes(params.view)) notFound();
-  return <CalendarApp initialView={params.view as ViewMode} />;
+// `params` is a Promise as of Next 15 — dynamic route params resolve lazily.
+export default async function ViewPage({
+  params,
+}: {
+  params: Promise<{ view: string }>;
+}) {
+  const { view } = await params;
+  if (!(VIEWS as string[]).includes(view)) notFound();
+  return <CalendarApp initialView={view as ViewMode} />;
 }

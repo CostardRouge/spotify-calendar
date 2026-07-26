@@ -6,8 +6,9 @@ import type { SpotifyTokens } from "./types";
 const isProd = process.env.NODE_ENV === "production";
 
 /** Read the current session tokens from httpOnly cookies. */
-export function readSession() {
-  const c = cookies();
+export async function readSession() {
+  // `cookies()` is async as of Next 15 — the request store is resolved lazily.
+  const c = await cookies();
   return {
     access: c.get(COOKIE.access)?.value ?? null,
     refresh: c.get(COOKIE.refresh)?.value ?? null,

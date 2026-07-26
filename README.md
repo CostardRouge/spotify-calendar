@@ -86,7 +86,16 @@ components/          -> Calendar, FilterPanel, DayModal
 lib/                -> config, auth cookies, Spotify client, pure filter helpers, types
 ```
 
-- **Framework:** Next.js 14 (App Router) + TypeScript, `output: "standalone"`.
+- **Framework:** Next.js 16 (App Router, Turbopack) + React 19 + TypeScript 7,
+  `output: "standalone"`. Requires Node.js 20.9+ (images and CI run Node 24).
+- **TypeScript:** `npm run typecheck` runs the TypeScript 7 native compiler.
+  TypeScript 7 no longer ships the old JavaScript compiler API, so
+  `node_modules/typescript` is the `@typescript/typescript6` compatibility
+  package — that is what `typescript-eslint` and editors load. Both live in
+  `devDependencies`; drop the `typescript6` shim once the tooling supports the
+  TypeScript 7 API (typescript-eslint tracks this in issue #10940).
+- **Lint:** `npm run lint` calls ESLint directly via `eslint.config.mjs` —
+  `next lint` was removed in Next 16.
 - **Docker:** `Dockerfile.dev` (hot reload) and `Dockerfile` (multi-stage,
   non-root, healthcheck) with matching Compose files.
 - **Data:** the whole saved-albums library is fetched server-side and enriched

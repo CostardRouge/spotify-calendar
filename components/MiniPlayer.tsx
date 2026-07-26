@@ -77,7 +77,6 @@ export default function MiniPlayer() {
       window.removeEventListener("player:needdevice", onNeedDevice);
       window.removeEventListener("player:error", onError);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function openDevicePicker() {

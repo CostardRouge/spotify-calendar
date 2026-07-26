@@ -183,7 +183,7 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
           ☰
         </button>
         <div className="logo">
-          <span className="dot" /> Library Calendar
+          <span className="dot" /> spotify-calendar
         </div>
         <nav className="viewswitch">
           {VIEWS.map((v) => (

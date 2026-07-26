@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
-  const savedState = cookies().get(COOKIE.state)?.value;
+  const savedState = (await cookies()).get(COOKIE.state)?.value;
 
   // Use the configured public base URL, not the (possibly internal) request host.
   const origin = appBaseUrl;

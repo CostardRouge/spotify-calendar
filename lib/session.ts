@@ -29,7 +29,7 @@ export function missingScopes(granted: string, required: string[]): string[] {
 export async function resolveAccessToken(): Promise<
   { accessToken: string; refreshed: SpotifyTokens | null; scope: string } | null
 > {
-  const session = readSession();
+  const session = await readSession();
   let accessToken = session.access;
   let scope = session.scope;
   let refreshed: SpotifyTokens | null = null;

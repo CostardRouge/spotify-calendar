@@ -8,9 +8,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * POST { artistIds: string[] } -> { genres: { [artistId]: string[] } }
+ * POST { artistIds: string[], force?: boolean } -> { genres: { [artistId]: string[] } }
  * Genres are looked up per artist and cached individually, so repeat calls
  * (and overlapping artists across albums/tracks) are nearly free.
+ *
+ * `force: true` bypasses the cache entirely (used by "redo genres") so a
+ * stale or previously-empty cached result doesn't just get re-served as-is —
+ * every id goes back to Spotify and the cache is overwritten with the result.
  */
 export async function POST(req: NextRequest) {
   if (isDemo()) {
@@ -29,9 +33,11 @@ export async function POST(req: NextRequest) {
   }
 
   let ids: string[] = [];
+  let force = false;
   try {
     const body = await req.json();
     ids = Array.isArray(body?.artistIds) ? body.artistIds.filter(Boolean) : [];
+    force = !!body?.force;
   } catch {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
@@ -40,7 +46,7 @@ export async function POST(req: NextRequest) {
   const genres: Record<string, string[]> = {};
   const missing: string[] = [];
   for (const id of ids) {
-    const c = getCache<string[]>(`genre:${id}`);
+    const c = force ? null : getCache<string[]>(`genre:${id}`);
     if (c) genres[id] = c.data;
     else missing.push(id);
   }

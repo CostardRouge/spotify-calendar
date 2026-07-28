@@ -135,7 +135,13 @@ async function apiGet(
   }
 
   if (!res.ok) {
-    throw new Error(`Spotify API ${path} -> ${res.status}`);
+    const bodyText = await res.text().catch(() => "<unreadable body>");
+    console.log(
+      `[GENRE-DEBUG] apiGet ${path} -> ${res.status} (unhandled status), body: ${bodyText.slice(0, 500)}`,
+    );
+    const err = new Error(`Spotify API ${path} -> ${res.status}`);
+    (err as any).status = res.status;
+    throw err;
   }
   // 204 No Content (e.g. /me/player when nothing is active) has an empty body,
   // so res.json() would throw — return null instead.
@@ -532,12 +538,25 @@ export async function fetchArtistGenresBatch(
     if (i > 0) await sleep(120);
     try {
       const d: any = await apiGet("/artists?ids=" + batch.join(","), token);
+      const rawArtists = d?.artists ?? [];
+      const withGenres = rawArtists.filter(
+        (a: any) => Array.isArray(a?.genres) && a.genres.length > 0,
+      ).length;
+      console.log(
+        `[GENRE-DEBUG] batch requested=${batch.length} spotify-returned=${rawArtists.length} with-nonempty-genres=${withGenres}`,
+        rawArtists[0]
+          ? `sample: ${JSON.stringify({ id: rawArtists[0].id, name: rawArtists[0].name, genres: rawArtists[0].genres })}`
+          : "(empty artists array)",
+      );
       // The /artists?ids= response echoes artists in request order with the same
       // ids, so keying by a.id lines up with the ids the route asked for.
-      for (const a of d?.artists ?? []) {
+      for (const a of rawArtists) {
         if (a?.id) map[a.id] = Array.isArray(a.genres) ? a.genres : [];
       }
     } catch (e) {
+      console.log(
+        `[GENRE-DEBUG] batch of ${batch.length} artist ids FAILED status=${(e as any)?.status} message=${(e as Error)?.message}`,
+      );
       // A rate limit / auth failure must NOT be swallowed: doing so returns empty
       // genres for the run and marks the sync "done" with an empty genre filter.
       // Surface it so the caller can back off and let the user resume.

@@ -44,6 +44,9 @@ export async function POST(req: NextRequest) {
     if (c) genres[id] = c.data;
     else missing.push(id);
   }
+  console.log(
+    `[GENRE-DEBUG] POST /api/genres requested=${ids.length} from-cache=${ids.length - missing.length} missing=${missing.length}`,
+  );
 
   if (missing.length) {
     try {
@@ -61,6 +64,9 @@ export async function POST(req: NextRequest) {
         `[GENRES] resolved ${nonEmpty}/${missing.length} artists with >=1 genre this chunk`,
       );
     } catch (e) {
+      console.log(
+        `[GENRE-DEBUG] fetchArtistGenresBatch threw status=${(e as any)?.status} message=${(e as Error)?.message} — falling back to cache-only result (${Object.keys(genres).length}/${ids.length} resolved)`,
+      );
       if ((e as any)?.status === 401) {
         return NextResponse.json({ error: "unauthorized" }, { status: 401 });
       }

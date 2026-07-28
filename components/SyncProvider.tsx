@@ -320,6 +320,9 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
         for (const a of it.artists) if (a.id) need.add(a.id);
     }
     const ids = [...need];
+    console.log(
+      `[GENRE-DEBUG] syncGenres: items=${itemsRef.current.length} need-genre-lookup-artist-ids=${ids.length}`,
+    );
     patchJob({ genres: { loaded: 0, total: ids.length } });
     if (!ids.length) return;
 
@@ -356,12 +359,21 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
       });
       if (res.ok) {
         const { genres } = await res.json();
+        const nonEmpty = Object.values(genres as Record<string, string[]>).filter(
+          (g) => g.length,
+        ).length;
+        console.log(
+          `[GENRE-DEBUG] chunk ${i}-${i + chunk.length}: requested=${chunk.length} got-back=${Object.keys(genres).length} with-nonempty-genres=${nonEmpty}`,
+        );
         Object.assign(genreMap, genres);
       } else {
         // A non-ok response here used to be silently ignored, so a throttled
         // genre phase would still complete "done" with an empty genre filter.
         // Surface it so run() can pause/flag and the phase can be resumed.
         const body = await res.json().catch(() => ({} as any));
+        console.log(
+          `[GENRE-DEBUG] chunk ${i}-${i + chunk.length}: request FAILED status=${res.status} body=${JSON.stringify(body)}`,
+        );
         if (res.status === 401) {
           const e: any = new Error(body.error || "Session expired — please log in again.");
           e.unauthorized = true;
@@ -380,6 +392,9 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
       patchJob({ genres: { loaded: Math.min(i + GENRE_CHUNK, ids.length), total: ids.length } });
     }
 
+    console.log(
+      `[GENRE-DEBUG] syncGenres done: genreMap has ${Object.keys(genreMap).length} artist entries, ${Object.values(genreMap).filter((g) => g.length).length} with >=1 genre`,
+    );
     applyGenres();
   }
 

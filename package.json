@@ -1,5 +1,5 @@
 {
-  "name": "spotify-library-calendar",
+  "name": "spotify-calendar",
   "version": "1.0.0",
   "private": true,
   "description": "Browse your saved Spotify albums on a calendar, grouped by the day you added them.",

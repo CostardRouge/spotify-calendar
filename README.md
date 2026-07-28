@@ -1,4 +1,4 @@
-# Spotify Library Calendar
+# spotify-calendar
 
 **[Showcase / screenshots →](https://costardrouge.github.io/spotify-calendar/)**
 

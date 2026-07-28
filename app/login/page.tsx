@@ -18,7 +18,7 @@ function LoginInner() {
     <div className="center-screen">
       <div className="card">
         <h1>
-          <span style={{ color: "var(--accent)" }}>●</span> Library Calendar
+          <span style={{ color: "var(--accent)" }}>●</span> spotify-calendar
         </h1>
         <p>
           Browse your saved Spotify albums on a calendar, arranged by the day you

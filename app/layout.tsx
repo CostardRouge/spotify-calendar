@@ -7,7 +7,7 @@ import PlaybackProvider from "@/components/PlaybackProvider";
 // so Open Graph / Twitter image URLs resolve to absolute links. Falls back to localhost.
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://127.0.0.1:3000";
 
-const title = "Spotify Calendar";
+const title = "spotify-calendar";
 const catchline = "Every album, on the day you saved it.";
 const description =
   "Browse your saved Spotify albums on a warm, editorial calendar — grouped by the day you added each one, filtered by year, artist and genre.";
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
     default: title,
-    template: "%s · Spotify Calendar",
+    template: "%s · spotify-calendar",
   },
   description,
   applicationName: title,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     "listening history",
     "contact sheet",
   ],
-  authors: [{ name: "Spotify Calendar" }],
+  authors: [{ name: "spotify-calendar" }],
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Library Cal",
+    title: "spotify-cal",
     statusBarStyle: "default",
   },
   openGraph: {
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Spotify Library Calendar — a contact sheet of album covers laid out by the day you saved them.",
+        alt: "spotify-calendar — a contact sheet of album covers laid out by the day you saved them.",
       },
     ],
   },

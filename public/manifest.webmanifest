@@ -1,6 +1,6 @@
 {
-  "name": "Spotify Library Calendar",
-  "short_name": "Library Cal",
+  "name": "spotify-calendar",
+  "short_name": "spotify-cal",
   "description": "Browse your saved Spotify albums on a warm, editorial calendar — grouped by the day you added each one, filtered by year, artist and genre.",
   "id": "/",
   "start_url": "/?source=pwa",

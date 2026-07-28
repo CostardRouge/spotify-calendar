@@ -101,15 +101,26 @@ async function apiGet(
     throw err;
   }
 
-  // 403 on a read endpoint (e.g. GET /me/player) means the account isn't
-  // Premium — mirrors apiSend's handling of control endpoints. Without this,
-  // the error falls through to the generic branch below with no `.status`,
-  // and callers like mapPlayerError() (which only special-cases 401/403/404/429)
-  // then hit their catch-all and return a literal HTTP 502 to the browser —
-  // which is what was happening on every /api/player poll for non-Premium
-  // accounts, every 5s, forever.
+  // 403 on a playback-state endpoint (e.g. GET /me/player) means the account
+  // isn't Premium — mirrors apiSend's handling of control endpoints. Without
+  // this, the error falls through to the generic branch below with no
+  // `.status`, and callers like mapPlayerError() (which only special-cases
+  // 401/403/404/429) then hit their catch-all and return a literal HTTP 502
+  // to the browser — which is what was happening on every /api/player poll
+  // for non-Premium accounts, every 5s, forever.
+  //
+  // Catalog endpoints (e.g. /artists) are NOT Premium-gated, so a 403 there
+  // means something else entirely (bad scope, app restrictions, etc.) — read
+  // and surface the actual body instead of guessing "premium_required".
   if (res.status === 403) {
-    const err = new Error("premium_required");
+    if (path.startsWith("/me/player")) {
+      const err = new Error("premium_required");
+      (err as any).status = 403;
+      throw err;
+    }
+    const bodyText = await res.text().catch(() => "<unreadable body>");
+    console.log(`[GENRE-DEBUG] GET ${path} -> 403, body: ${bodyText.slice(0, 500)}`);
+    const err = new Error(`Spotify API ${path} -> 403: ${bodyText.slice(0, 200)}`);
     (err as any).status = 403;
     throw err;
   }
@@ -557,10 +568,11 @@ export async function fetchArtistGenresBatch(
       console.log(
         `[GENRE-DEBUG] batch of ${batch.length} artist ids FAILED status=${(e as any)?.status} message=${(e as Error)?.message}`,
       );
-      // A rate limit / auth failure must NOT be swallowed: doing so returns empty
-      // genres for the run and marks the sync "done" with an empty genre filter.
-      // Surface it so the caller can back off and let the user resume.
-      if ((e as any)?.status === 429 || (e as any)?.status === 401) throw e;
+      // A rate limit / auth / catalog-access failure must NOT be swallowed: doing
+      // so returns empty genres for the run and marks the sync "done" with an
+      // empty genre filter. Surface it so the caller can back off and let the
+      // user resume.
+      if ((e as any)?.status === 429 || (e as any)?.status === 401 || (e as any)?.status === 403) throw e;
       // Other transient errors stay non-fatal: leave those artists ungenred.
     }
   }

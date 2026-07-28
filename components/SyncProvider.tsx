@@ -387,6 +387,15 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
             Number(body.retryAfter) || Number(res.headers.get("Retry-After")) || 60;
           throw e;
         }
+        if (res.status === 403) {
+          // The genre lookup itself is being rejected (not a rate limit, not auth
+          // expiry) — every chunk will fail the same way, so stop instead of
+          // burning through the whole library and finishing "done" with 0 genres.
+          applyGenres(); // keep partial progress
+          const e: any = new Error(body.detail || "Spotify rejected the genre lookup (403).");
+          e.forbidden = true;
+          throw e;
+        }
         // Other errors: skip this chunk, keep going (best-effort).
       }
       patchJob({ genres: { loaded: Math.min(i + GENRE_CHUNK, ids.length), total: ids.length } });

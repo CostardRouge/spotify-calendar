@@ -80,6 +80,15 @@ export async function POST(req: NextRequest) {
           { status: 429, headers: { "Retry-After": String(retryAfter) } },
         );
       }
+      if ((e as any)?.status === 403) {
+        // The /artists catalog endpoint rejected the request — not a rate limit,
+        // not auth expiry. Surface it instead of quietly returning empty genres
+        // for the whole library.
+        return NextResponse.json(
+          { error: "forbidden", detail: (e as Error)?.message },
+          { status: 403 },
+        );
+      }
       // Best-effort: return whatever we resolved from cache.
     }
   }

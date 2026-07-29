@@ -20,10 +20,12 @@ import { loadSnapshot, saveSnapshot } from "@/lib/clientCache";
 
 const PAGE = 50;
 const SNAPSHOT_EVERY_PAGES = 5;
-// Artists per /api/genres POST. Genres resolve via Spotify's bulk endpoint
-// (50 ids/request), so a chunk of this size is only a handful of upstream calls
-// and finishes comfortably inside the route's 120s budget.
-const GENRE_CHUNK = 200;
+// Artists per /api/genres POST. Since Spotify's Feb 2026 dev-mode
+// restrictions removed the bulk artists endpoint, the server may have to
+// resolve each artist with its own paced request (~150ms apart) — 50 per POST
+// keeps every request comfortably inside the route's 120s budget and updates
+// the progress bar often enough to show life on a big library.
+const GENRE_CHUNK = 50;
 
 // Auto-start rules, applied once per app load after hydration:
 // – a job interrupted mid-run (tab closed while "running") resumes immediately;
@@ -33,7 +35,13 @@ const AUTO_RESUME_PAUSED_AFTER_MS = 30 * 60 * 1000;
 // – a completed library this stale checks for new saves (incremental refresh).
 const AUTO_REFRESH_AFTER_MS = 60 * 60 * 1000;
 
-type RunMode = "resume" | "restart" | "refresh";
+type RunMode =
+  | "resume"
+  | "restart"
+  | "refresh"
+  | "redo-albums"
+  | "redo-tracks"
+  | "redo-genres";
 
 /** Human-readable "come back later" message for an active cooldown. */
 function rateLimitMsg(until: number): string {
@@ -63,6 +71,9 @@ interface SyncContextValue {
   start: () => void; // resume / continue
   restart: () => void; // redo from scratch
   refresh: () => void; // fetch only newly saved items
+  redoAlbums: () => void; // re-fetch saved albums only, leaving tracks/genres alone
+  redoTracks: () => void; // re-fetch liked songs only, leaving albums/genres alone
+  redoGenres: () => void; // force a fresh genre lookup for every artist, bypassing the cache
   pause: () => void;
   cancel: () => void;
   clearError: () => void;
@@ -312,14 +323,20 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
     return fresh.length;
   }
 
-  async function syncGenres() {
+  // force=true re-looks-up every artist (not just ones missing genres) and
+  // tells the server to bypass its cache, so a previously-cached (possibly
+  // stale or wrongly-empty) result doesn't just get re-served as-is.
+  async function syncGenres(force = false) {
     patchJob({ phase: "genres" });
     const need = new Set<string>();
     for (const it of itemsRef.current) {
-      if (it.genres.length === 0)
+      if (force || it.genres.length === 0)
         for (const a of it.artists) if (a.id) need.add(a.id);
     }
     const ids = [...need];
+    console.log(
+      `[GENRE-DEBUG] syncGenres: items=${itemsRef.current.length} need-genre-lookup-artist-ids=${ids.length} force=${force}`,
+    );
     patchJob({ genres: { loaded: 0, total: ids.length } });
     if (!ids.length) return;
 
@@ -331,16 +348,21 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
     const applyGenres = () => {
       if (!Object.keys(genreMap).length) return;
       setItems(
-        itemsRef.current.map((it) =>
-          it.genres.length
-            ? it
-            : {
-                ...it,
-                genres: [
-                  ...new Set(it.artists.flatMap((a) => genreMap[a.id] ?? [])),
-                ],
-              },
-        ),
+        itemsRef.current.map((it) => {
+          if (!force && it.genres.length) return it;
+          // Only overwrite once we've actually resolved at least one of this
+          // item's artists — otherwise keep what it had until we know better
+          // (a partial/interrupted force-refetch shouldn't blank out genres
+          // for artists we haven't reached yet).
+          const resolved = it.artists.some((a) => a.id && genreMap[a.id] !== undefined);
+          if (!resolved) return it;
+          return {
+            ...it,
+            genres: [
+              ...new Set(it.artists.flatMap((a) => genreMap[a.id] ?? [])),
+            ],
+          };
+        }),
       );
       persistSnapshot();
     };
@@ -351,17 +373,26 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
       const res = await fetch("/api/genres", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ artistIds: chunk }),
+        body: JSON.stringify({ artistIds: chunk, force }),
         signal: AbortSignal.timeout(120000),
       });
       if (res.ok) {
         const { genres } = await res.json();
+        const nonEmpty = Object.values(genres as Record<string, string[]>).filter(
+          (g) => g.length,
+        ).length;
+        console.log(
+          `[GENRE-DEBUG] chunk ${i}-${i + chunk.length}: requested=${chunk.length} got-back=${Object.keys(genres).length} with-nonempty-genres=${nonEmpty}`,
+        );
         Object.assign(genreMap, genres);
       } else {
         // A non-ok response here used to be silently ignored, so a throttled
         // genre phase would still complete "done" with an empty genre filter.
         // Surface it so run() can pause/flag and the phase can be resumed.
         const body = await res.json().catch(() => ({} as any));
+        console.log(
+          `[GENRE-DEBUG] chunk ${i}-${i + chunk.length}: request FAILED status=${res.status} body=${JSON.stringify(body)}`,
+        );
         if (res.status === 401) {
           const e: any = new Error(body.error || "Session expired — please log in again.");
           e.unauthorized = true;
@@ -375,11 +406,23 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
             Number(body.retryAfter) || Number(res.headers.get("Retry-After")) || 60;
           throw e;
         }
+        if (res.status === 403) {
+          // The genre lookup itself is being rejected (not a rate limit, not auth
+          // expiry) — every chunk will fail the same way, so stop instead of
+          // burning through the whole library and finishing "done" with 0 genres.
+          applyGenres(); // keep partial progress
+          const e: any = new Error(body.detail || "Spotify rejected the genre lookup (403).");
+          e.forbidden = true;
+          throw e;
+        }
         // Other errors: skip this chunk, keep going (best-effort).
       }
       patchJob({ genres: { loaded: Math.min(i + GENRE_CHUNK, ids.length), total: ids.length } });
     }
 
+    console.log(
+      `[GENRE-DEBUG] syncGenres done: genreMap has ${Object.keys(genreMap).length} artist entries, ${Object.values(genreMap).filter((g) => g.length).length} with >=1 genre`,
+    );
     applyGenres();
   }
 
@@ -413,6 +456,33 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
         startedAt: Date.now(),
       };
       commitJob();
+    } else if (mode === "redo-albums") {
+      // Drop only the album items — tracks and everyone's genres are untouched.
+      setItems(itemsRef.current.filter((i) => i.kind !== "album"));
+      patchJob({
+        status: "running",
+        error: null,
+        albums: { loaded: 0, total: null },
+        startedAt: jobRef.current.startedAt ?? Date.now(),
+      });
+    } else if (mode === "redo-tracks") {
+      setItems(itemsRef.current.filter((i) => i.kind !== "track"));
+      patchJob({
+        status: "running",
+        error: null,
+        tracks: { loaded: 0, total: null },
+        startedAt: jobRef.current.startedAt ?? Date.now(),
+      });
+    } else if (mode === "redo-genres") {
+      // Clear every item's genres so syncGenres(force) re-resolves all of them,
+      // bypassing the server cache instead of just re-serving stale results.
+      setItems(itemsRef.current.map((i) => ({ ...i, genres: [] })));
+      patchJob({
+        status: "running",
+        error: null,
+        genres: { loaded: 0, total: null },
+        startedAt: jobRef.current.startedAt ?? Date.now(),
+      });
     } else {
       patchJob({
         status: "running",
@@ -426,7 +496,13 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
         ? "Sync started (full)"
         : mode === "refresh"
           ? "Checking for new saves…"
-          : "Sync resumed",
+          : mode === "redo-albums"
+            ? "Redoing saved albums…"
+            : mode === "redo-tracks"
+              ? "Redoing liked songs…"
+              : mode === "redo-genres"
+                ? "Redoing genres…"
+                : "Sync resumed",
     );
 
     try {
@@ -436,13 +512,24 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
         if (stopRequested()) return finishStopped();
         newCount += await syncKindIncremental("track");
         if (stopRequested()) return finishStopped();
+        await syncGenres();
+      } else if (mode === "redo-albums") {
+        await syncKind("album");
+        if (stopRequested()) return finishStopped();
+        await syncGenres();
+      } else if (mode === "redo-tracks") {
+        await syncKind("track");
+        if (stopRequested()) return finishStopped();
+        await syncGenres();
+      } else if (mode === "redo-genres") {
+        await syncGenres(true);
       } else {
         await syncKind("album");
         if (stopRequested()) return finishStopped();
         await syncKind("track");
         if (stopRequested()) return finishStopped();
+        await syncGenres();
       }
-      await syncGenres();
       if (stopRequested()) return finishStopped();
 
       patchJob({ status: "done", phase: "done", finishedAt: Date.now() });
@@ -453,7 +540,13 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
           ? newCount
             ? `Refresh complete — ${newCount} new item${newCount === 1 ? "" : "s"}`
             : "Refresh complete — no new saves"
-          : "Sync complete",
+          : mode === "redo-albums"
+            ? "Albums redone"
+            : mode === "redo-tracks"
+              ? "Liked songs redone"
+              : mode === "redo-genres"
+                ? "Genres redone"
+                : "Sync complete",
       );
     } catch (e: any) {
       if (e?.unauthorized) {
@@ -509,6 +602,9 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
   const start = useCallback(() => run("resume"), [run]);
   const restart = useCallback(() => run("restart"), [run]);
   const refresh = useCallback(() => run("refresh"), [run]);
+  const redoAlbums = useCallback(() => run("redo-albums"), [run]);
+  const redoTracks = useCallback(() => run("redo-tracks"), [run]);
+  const redoGenres = useCallback(() => run("redo-genres"), [run]);
   const pause = useCallback(() => {
     if (runningRef.current) pauseRef.current = true;
   }, []);
@@ -534,6 +630,9 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
         start,
         restart,
         refresh,
+        redoAlbums,
+        redoTracks,
+        redoGenres,
         pause,
         cancel,
         clearError,

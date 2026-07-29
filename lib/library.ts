@@ -69,6 +69,10 @@ export function artistIndex(albums: Album[]): ArtistEntry[] {
 export function genreIndex(albums: Album[]): { genre: string; count: number }[] {
   const idx: Record<string, number> = {};
   for (const al of albums) for (const g of al.genres) idx[g] = (idx[g] ?? 0) + 1;
+  const withGenres = albums.filter((al) => al.genres.length > 0).length;
+  console.log(
+    `[GENRE-DEBUG] genreIndex: albums=${albums.length} albums-with-genres=${withGenres} distinct-genres=${Object.keys(idx).length}`,
+  );
   return Object.entries(idx)
     .map(([genre, count]) => ({ genre, count }))
     .sort((a, b) => b.count - a.count);

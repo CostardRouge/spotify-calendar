@@ -8,9 +8,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * POST { artistIds: string[] } -> { genres: { [artistId]: string[] } }
+ * POST { artistIds: string[], force?: boolean } -> { genres: { [artistId]: string[] } }
  * Genres are looked up per artist and cached individually, so repeat calls
  * (and overlapping artists across albums/tracks) are nearly free.
+ *
+ * `force: true` bypasses the cache entirely (used by "redo genres") so a
+ * stale or previously-empty cached result doesn't just get re-served as-is —
+ * every id goes back to Spotify and the cache is overwritten with the result.
  */
 export async function POST(req: NextRequest) {
   if (isDemo()) {
@@ -29,9 +33,11 @@ export async function POST(req: NextRequest) {
   }
 
   let ids: string[] = [];
+  let force = false;
   try {
     const body = await req.json();
     ids = Array.isArray(body?.artistIds) ? body.artistIds.filter(Boolean) : [];
+    force = !!body?.force;
   } catch {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
@@ -40,10 +46,13 @@ export async function POST(req: NextRequest) {
   const genres: Record<string, string[]> = {};
   const missing: string[] = [];
   for (const id of ids) {
-    const c = getCache<string[]>(`genre:${id}`);
+    const c = force ? null : getCache<string[]>(`genre:${id}`);
     if (c) genres[id] = c.data;
     else missing.push(id);
   }
+  console.log(
+    `[GENRE-DEBUG] POST /api/genres requested=${ids.length} from-cache=${ids.length - missing.length} missing=${missing.length}`,
+  );
 
   if (missing.length) {
     try {
@@ -61,6 +70,9 @@ export async function POST(req: NextRequest) {
         `[GENRES] resolved ${nonEmpty}/${missing.length} artists with >=1 genre this chunk`,
       );
     } catch (e) {
+      console.log(
+        `[GENRE-DEBUG] fetchArtistGenresBatch threw status=${(e as any)?.status} message=${(e as Error)?.message} — falling back to cache-only result (${Object.keys(genres).length}/${ids.length} resolved)`,
+      );
       if ((e as any)?.status === 401) {
         return NextResponse.json({ error: "unauthorized" }, { status: 401 });
       }
@@ -72,6 +84,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           { error: "rate_limited", detail: (e as any)?.message, retryAfter },
           { status: 429, headers: { "Retry-After": String(retryAfter) } },
+        );
+      }
+      if ((e as any)?.status === 403) {
+        // The /artists catalog endpoint rejected the request — not a rate limit,
+        // not auth expiry. Surface it instead of quietly returning empty genres
+        // for the whole library.
+        return NextResponse.json(
+          { error: "forbidden", detail: (e as Error)?.message },
+          { status: 403 },
         );
       }
       // Best-effort: return whatever we resolved from cache.

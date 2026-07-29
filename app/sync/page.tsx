@@ -20,8 +20,20 @@ function Bar({ loaded, total }: { loaded: number; total: number | null }) {
 }
 
 export default function SyncPage() {
-  const { job, items, isRunning, start, restart, refresh, pause, cancel, clearError } =
-    useSync();
+  const {
+    job,
+    items,
+    isRunning,
+    start,
+    restart,
+    refresh,
+    redoAlbums,
+    redoTracks,
+    redoGenres,
+    pause,
+    cancel,
+    clearError,
+  } = useSync();
 
   const fmt = (ts: number | null) =>
     ts ? new Date(ts).toLocaleString() : "—";
@@ -112,6 +124,33 @@ export default function SyncPage() {
         </button>
         <button className="btn" onClick={restart} disabled={isRunning || cooldownActive}>
           ↻ Redo (full)
+        </button>
+      </div>
+
+      <div className="sync-actions">
+        <button
+          className="btn"
+          onClick={redoAlbums}
+          disabled={isRunning || cooldownActive}
+          title="Re-fetch saved albums from Spotify, leaving liked songs and genres alone"
+        >
+          ↻ Redo saved albums
+        </button>
+        <button
+          className="btn"
+          onClick={redoTracks}
+          disabled={isRunning || cooldownActive}
+          title="Re-fetch liked songs from Spotify, leaving saved albums and genres alone"
+        >
+          ↻ Redo liked songs
+        </button>
+        <button
+          className="btn"
+          onClick={redoGenres}
+          disabled={isRunning || cooldownActive || items.length === 0}
+          title="Force a fresh genre lookup for every artist, bypassing the cache"
+        >
+          ↻ Redo genres
         </button>
       </div>
 

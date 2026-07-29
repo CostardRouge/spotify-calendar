@@ -523,17 +523,52 @@ export async function fetchTracksPage(
   return { items, total: d.total ?? items.length, next: !!d.next };
 }
 
+// Spotify's February 2026 API restrictions removed the bulk "Get Several
+// Artists" endpoint (GET /artists?ids=...) for development-mode apps — it now
+// answers a bare 403 Forbidden. The single GET /artists/{id} endpoint remains
+// available and still carries the `genres` field. Remember the outcome per
+// process so after the first 403 we stop poking the dead endpoint entirely.
+let bulkArtistsUnavailable = false;
+
+// Pause between single-artist requests. Dev-mode rate limits are tight and a
+// large library resolves thousands of artists; the per-artist server cache
+// keeps repeat runs cheap, so favor being slow-but-reliable over fast-but-429d.
+const SINGLE_ARTIST_PACE_MS = 150;
+
+async function fetchArtistGenresOneByOne(
+  token: string,
+  ids: string[],
+  map: Record<string, string[]>,
+): Promise<void> {
+  for (let i = 0; i < ids.length; i++) {
+    if (i > 0) await sleep(SINGLE_ARTIST_PACE_MS);
+    const id = ids[i];
+    try {
+      const a: any = await apiGet(`/artists/${id}`, token);
+      if (a?.id) map[a.id] = Array.isArray(a.genres) ? a.genres : [];
+    } catch (e) {
+      const status = (e as any)?.status;
+      console.log(
+        `[GENRE-DEBUG] single artist ${id} FAILED status=${status} message=${(e as Error)?.message}`,
+      );
+      // 429/401 must surface so the caller backs off; 403 here means even the
+      // single-artist endpoint is blocked for this app — no genre source left,
+      // surface it rather than silently finishing with an empty genre filter.
+      if (status === 429 || status === 401 || status === 403) throw e;
+      // Anything else (404 for a ghost id, transient 5xx): leave it ungenred.
+    }
+  }
+}
+
 /**
  * Fetch genres for a set of artist ids (Spotify tags genres on artists, not
- * albums/tracks). Returns a map artistId -> genres. Best-effort.
+ * albums/tracks — album objects' `genres` array is deprecated and always
+ * empty). Returns a map artistId -> genres. Best-effort.
  *
- * Uses the bulk "Get Several Artists" endpoint (GET /artists?ids=..., up to 50
- * ids per request). This matters at scale: a large library has thousands of
- * unique artists, and resolving them one-request-per-artist fires thousands of
- * calls that trip Spotify's rolling rate window almost immediately — the 429
- * then aborts the whole genre phase before anything is applied, which is why the
- * genre filter came up completely empty. Batching by 50 cuts that to a few dozen
- * requests for the same library.
+ * Tries the bulk "Get Several Artists" endpoint first (50 ids/request — a few
+ * dozen calls for a big library). Since Spotify's February 2026 restrictions
+ * that endpoint 403s for development-mode apps, so on the first 403 we fall
+ * back to paced single GET /artists/{id} requests for the rest of the process.
  */
 export async function fetchArtistGenresBatch(
   token: string,
@@ -541,6 +576,12 @@ export async function fetchArtistGenresBatch(
 ): Promise<Record<string, string[]>> {
   const map: Record<string, string[]> = {};
   const unique = [...new Set(ids.filter(Boolean))];
+
+  if (bulkArtistsUnavailable) {
+    await fetchArtistGenresOneByOne(token, unique, map);
+    return map;
+  }
+
   for (let i = 0; i < unique.length; i += 50) {
     const batch = unique.slice(i, i + 50);
     if (!batch.length) continue;
@@ -568,11 +609,21 @@ export async function fetchArtistGenresBatch(
       console.log(
         `[GENRE-DEBUG] batch of ${batch.length} artist ids FAILED status=${(e as any)?.status} message=${(e as Error)?.message}`,
       );
-      // A rate limit / auth / catalog-access failure must NOT be swallowed: doing
-      // so returns empty genres for the run and marks the sync "done" with an
-      // empty genre filter. Surface it so the caller can back off and let the
-      // user resume.
-      if ((e as any)?.status === 429 || (e as any)?.status === 401 || (e as any)?.status === 403) throw e;
+      if ((e as any)?.status === 403) {
+        // Bulk endpoint removed for this app (Feb 2026 dev-mode restrictions).
+        // Switch to single-artist requests for the remaining ids — and skip the
+        // dead endpoint on every future call in this process.
+        bulkArtistsUnavailable = true;
+        console.log(
+          "[GENRES] bulk /artists?ids= endpoint unavailable (403) — falling back to single GET /artists/{id} requests",
+        );
+        await fetchArtistGenresOneByOne(token, unique.slice(i), map);
+        return map;
+      }
+      // A rate limit / auth failure must NOT be swallowed: doing so returns
+      // empty genres for the run and marks the sync "done" with an empty genre
+      // filter. Surface it so the caller can back off and let the user resume.
+      if ((e as any)?.status === 429 || (e as any)?.status === 401) throw e;
       // Other transient errors stay non-fatal: leave those artists ungenred.
     }
   }

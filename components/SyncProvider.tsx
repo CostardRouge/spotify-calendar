@@ -20,10 +20,12 @@ import { loadSnapshot, saveSnapshot } from "@/lib/clientCache";
 
 const PAGE = 50;
 const SNAPSHOT_EVERY_PAGES = 5;
-// Artists per /api/genres POST. Genres resolve via Spotify's bulk endpoint
-// (50 ids/request), so a chunk of this size is only a handful of upstream calls
-// and finishes comfortably inside the route's 120s budget.
-const GENRE_CHUNK = 200;
+// Artists per /api/genres POST. Since Spotify's Feb 2026 dev-mode
+// restrictions removed the bulk artists endpoint, the server may have to
+// resolve each artist with its own paced request (~150ms apart) — 50 per POST
+// keeps every request comfortably inside the route's 120s budget and updates
+// the progress bar often enough to show life on a big library.
+const GENRE_CHUNK = 50;
 
 // Auto-start rules, applied once per app load after hydration:
 // – a job interrupted mid-run (tab closed while "running") resumes immediately;

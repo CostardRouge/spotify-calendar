@@ -46,4 +46,8 @@ export const COOKIE = {
   expires: "sp_expires",
   scope: "sp_scope",
   state: "sp_state",
+  // Spotify user id of the session owner. Everything user-scoped (client
+  // snapshots, the server-side library store) is keyed by this id so multiple
+  // accounts never read or overwrite each other's data.
+  userId: "sp_uid",
 };

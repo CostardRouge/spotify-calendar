@@ -16,7 +16,13 @@ import {
   type JobLog,
   type SyncJob,
 } from "@/lib/sync";
-import { loadSnapshot, saveSnapshot } from "@/lib/clientCache";
+import {
+  ANON_USER_ID,
+  SCHEMA_VERSION,
+  loadSnapshot,
+  saveSnapshot,
+  type Snapshot,
+} from "@/lib/clientCache";
 
 const PAGE = 50;
 const SNAPSHOT_EVERY_PAGES = 5;
@@ -41,6 +47,45 @@ function rateLimitMsg(until: number): string {
   const mins = Math.ceil(secs / 60);
   const at = new Date(until).toLocaleTimeString();
   return `Spotify rate limit active — try again in ~${mins} min (around ${at}).`;
+}
+
+/**
+ * Who is logged in, so all persisted state is keyed per Spotify account.
+ * Falls back to the anonymous id when logged out / unreachable (an anonymous
+ * visitor cannot sync anyway — the API returns 401).
+ */
+async function fetchUserId(): Promise<string> {
+  try {
+    const r = await fetch("/api/me", { signal: AbortSignal.timeout(8000) });
+    if (r.ok) {
+      const j = await r.json();
+      if (j?.id) return String(j.id);
+    }
+  } catch {
+    // offline / timeout — treat as anonymous
+  }
+  return ANON_USER_ID;
+}
+
+/** This user's snapshot stored on the server, if any. */
+async function fetchServerLibrary(): Promise<Snapshot | null> {
+  try {
+    const r = await fetch("/api/library", { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const s = j?.snapshot;
+    if (s && Array.isArray(s.items) && s.items.length) {
+      return {
+        ts: typeof s.ts === "number" ? s.ts : Date.now(),
+        items: s.items,
+        likedSongs: Number(s.likedSongs) || 0,
+        v: SCHEMA_VERSION,
+      };
+    }
+  } catch {
+    // best-effort — the local copy (or a fresh sync) covers it
+  }
+  return null;
 }
 
 /** The server's shared cooldown, if any. Does NOT contact Spotify. */
@@ -79,6 +124,10 @@ export function useSync(): SyncContextValue {
 export default function SyncProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
+  // Spotify account all persisted state is keyed by. Resolved during
+  // hydration, before anything is read or written.
+  const userIdRef = useRef<string>(ANON_USER_ID);
+
   // --- items (with a ref mirror for use inside the async loop) ---
   const itemsRef = useRef<Album[]>([]);
   const [items, setItemsState] = useState<Album[]>([]);
@@ -93,7 +142,7 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
   const commitJob = useCallback(() => {
     const snapshot = { ...jobRef.current, logs: [...jobRef.current.logs] };
     setJobState(snapshot);
-    saveJob(snapshot);
+    saveJob(userIdRef.current, snapshot);
   }, []);
   const patchJob = useCallback(
     (p: Partial<SyncJob>) => {
@@ -124,9 +173,19 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const snap = await loadSnapshot();
+      // Identity first: every read/write below is keyed by this account.
+      const userId = await fetchUserId();
+      userIdRef.current = userId;
+
+      let snap = await loadSnapshot(userId);
+      if (!snap?.items?.length && userId !== ANON_USER_ID) {
+        // No local copy (fresh browser / other device) — restore this user's
+        // library from the server so previous syncs are consultable anywhere.
+        snap = await fetchServerLibrary();
+        if (snap) void saveSnapshot(userId, snap.items, snap.likedSongs);
+      }
       if (!cancelled && snap?.items?.length) setItems(snap.items);
-      const stored = loadJob();
+      const stored = loadJob(userId);
       const now = Date.now();
       let auto: RunMode | null = null;
 
@@ -183,7 +242,20 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
   const persistSnapshot = useCallback(() => {
     const tracks = itemsRef.current.filter((i) => i.kind === "track").length;
     // Fire-and-forget: the async IndexedDB write must not block the sync loop.
-    void saveSnapshot(itemsRef.current, tracks).catch(() => {});
+    void saveSnapshot(userIdRef.current, itemsRef.current, tracks).catch(() => {});
+  }, []);
+
+  // Mirror the completed library to the server (per-user store), so it can be
+  // restored from any browser. Only called on a *completed* sync: pushing a
+  // partial run would replace a good server copy with an incomplete one.
+  const pushServerLibrary = useCallback(() => {
+    if (userIdRef.current === ANON_USER_ID || !itemsRef.current.length) return;
+    const tracks = itemsRef.current.filter((i) => i.kind === "track").length;
+    void fetch("/api/library", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: itemsRef.current, likedSongs: tracks }),
+    }).catch(() => {});
   }, []);
 
   const appendUnique = useCallback(
@@ -447,6 +519,7 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
 
       patchJob({ status: "done", phase: "done", finishedAt: Date.now() });
       persistSnapshot();
+      pushServerLibrary();
       log(
         "info",
         mode === "refresh"

@@ -1,5 +1,5 @@
 import { readSession } from "./auth";
-import { refreshAccessToken } from "./spotify";
+import { getMe, refreshAccessToken } from "./spotify";
 import type { SpotifyTokens } from "./types";
 
 // Scopes required by the player endpoints. Reading playback state / devices
@@ -46,4 +46,29 @@ export async function resolveAccessToken(): Promise<
 
   if (!accessToken) return null;
   return { accessToken, refreshed, scope };
+}
+
+/**
+ * Identify the authenticated user. The id normally comes straight from the
+ * sp_uid cookie (set at login); sessions minted before per-user isolation lack
+ * it, so we fall back to asking Spotify once. When `cookieMissing` is true the
+ * caller should persist the id via writeUserIdCookie so the lookup isn't repeated.
+ * Returns null when not authenticated.
+ */
+export async function resolveUserId(): Promise<
+  { userId: string; refreshed: SpotifyTokens | null; cookieMissing: boolean } | null
+> {
+  const session = await readSession();
+  if (session.userId) {
+    return { userId: session.userId, refreshed: null, cookieMissing: false };
+  }
+  const auth = await resolveAccessToken();
+  if (!auth) return null;
+  try {
+    const me = await getMe(auth.accessToken);
+    if (!me.id) return null;
+    return { userId: me.id, refreshed: auth.refreshed, cookieMissing: true };
+  } catch {
+    return null;
+  }
 }

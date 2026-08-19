@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { exchangeCode } from "@/lib/spotify";
-import { writeTokenCookies } from "@/lib/auth";
+import { exchangeCode, getMe } from "@/lib/spotify";
+import { writeTokenCookies, writeUserIdCookie } from "@/lib/auth";
 import { COOKIE, appBaseUrl } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +28,15 @@ export async function GET(req: NextRequest) {
     const tokens = await exchangeCode(code);
     const res = NextResponse.redirect(origin + "/");
     writeTokenCookies(res, tokens);
+    // Pin the session to a Spotify account so all stored data (client
+    // snapshots, server library) is keyed per user. Best-effort: if the
+    // profile call fails, /api/me resolves and cookies the id later.
+    try {
+      const me = await getMe(tokens.access_token);
+      if (me.id) writeUserIdCookie(res, me.id);
+    } catch {
+      // non-fatal
+    }
     res.cookies.set(COOKIE.state, "", { path: "/", maxAge: 0 });
     return res;
   } catch {

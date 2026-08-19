@@ -9,13 +9,23 @@ import type { Album } from "./types";
  * practical size cap and survives reloads and redeploys, so the loaded albums
  * and tracks persist until the user chooses to re-sync.
  *
- * The store keeps a single record. It is versioned: bump SCHEMA_VERSION whenever
- * the `Album` shape changes so old snapshots are invalidated cleanly (a re-sync)
- * instead of silently feeding a mismatched shape into the UI.
+ * Records are keyed per Spotify user id, so several accounts sharing one
+ * browser each keep their own snapshot — logging in with another account can
+ * never display or overwrite someone else's library. They are versioned: bump
+ * SCHEMA_VERSION whenever the `Album` shape changes so old snapshots are
+ * invalidated cleanly (a re-sync) instead of silently feeding a mismatched
+ * shape into the UI.
  */
 const DB_NAME = "spotify-calendar";
 const STORE = "library";
-const RECORD_KEY = "snapshot";
+
+/** Pre-isolation single-user record — claimed by the first account to log in. */
+const LEGACY_RECORD_KEY = "snapshot";
+
+/** User id used when nobody is logged in (demo screenshots, expired session). */
+export const ANON_USER_ID = "anon";
+
+const recordKeyFor = (userId: string) => `snapshot:${userId}`;
 
 /** Bump this when the persisted `Album`/`Snapshot` shape changes. */
 export const SCHEMA_VERSION = 1;
@@ -86,8 +96,8 @@ async function idbDelete(key: string): Promise<void> {
   });
 }
 
-/** One-time import of an existing localStorage snapshot into IndexedDB. */
-async function migrateLegacy(): Promise<Snapshot | null> {
+/** Parse (and remove) the pre-IndexedDB localStorage snapshot, if present. */
+function takeLegacyLocalStorage(): Snapshot | null {
   if (typeof localStorage === "undefined") return null;
   let raw: string | null = null;
   try {
@@ -99,14 +109,12 @@ async function migrateLegacy(): Promise<Snapshot | null> {
   try {
     const old = JSON.parse(raw) as Partial<Snapshot>;
     if (old && Array.isArray(old.items)) {
-      const snap: Snapshot = {
+      return {
         ts: typeof old.ts === "number" ? old.ts : Date.now(),
         items: old.items as Album[],
         likedSongs: typeof old.likedSongs === "number" ? old.likedSongs : 0,
         v: SCHEMA_VERSION,
       };
-      await idbPut(RECORD_KEY, snap);
-      return snap;
     }
   } catch {
     // corrupt legacy entry — nothing to migrate
@@ -120,42 +128,67 @@ async function migrateLegacy(): Promise<Snapshot | null> {
   return null;
 }
 
+function validSnapshot(snap: Snapshot | undefined | null): Snapshot | null {
+  if (!snap) return null;
+  if (snap.v !== SCHEMA_VERSION) return null;
+  if (!Array.isArray(snap.items)) return null;
+  return snap;
+}
+
 /**
- * Load the persisted library. Returns null if nothing is stored, IndexedDB is
- * unavailable, or the stored schema version no longer matches (in which case the
- * stale record is cleared). There is intentionally no time-based expiry: the
- * snapshot is the durable local copy and stays until the user re-syncs.
+ * Load the persisted library for one user. Returns null if nothing is stored,
+ * IndexedDB is unavailable, or the stored schema version no longer matches (in
+ * which case the stale record is cleared). There is intentionally no time-based
+ * expiry: the snapshot is the durable local copy and stays until the user
+ * re-syncs.
+ *
+ * Pre-isolation data (the single un-keyed record, or the even older
+ * localStorage snapshot) is claimed by the first *logged-in* account that
+ * loads — on a personal browser that is its owner. Anonymous visitors can read
+ * it (matching the old behaviour) but never claim it.
  */
-export async function loadSnapshot(): Promise<Snapshot | null> {
+export async function loadSnapshot(userId: string): Promise<Snapshot | null> {
   if (!idbAvailable()) return null;
   try {
-    const snap = await idbGet<Snapshot>(RECORD_KEY);
-    if (!snap) return await migrateLegacy();
-    if (snap.v !== SCHEMA_VERSION) {
-      await idbDelete(RECORD_KEY).catch(() => {});
-      return null;
+    const key = recordKeyFor(userId);
+    const own = await idbGet<Snapshot>(key);
+    if (own !== undefined) {
+      const valid = validSnapshot(own);
+      if (!valid) await idbDelete(key).catch(() => {});
+      return valid;
     }
-    if (!Array.isArray(snap.items)) return null;
-    return snap;
+
+    const legacy =
+      validSnapshot(await idbGet<Snapshot>(LEGACY_RECORD_KEY)) ??
+      validSnapshot(takeLegacyLocalStorage());
+    if (legacy && userId !== ANON_USER_ID) {
+      await idbPut(key, legacy);
+      await idbDelete(LEGACY_RECORD_KEY).catch(() => {});
+    }
+    return legacy;
   } catch {
     return null;
   }
 }
 
-export async function saveSnapshot(items: Album[], likedSongs: number): Promise<void> {
+export async function saveSnapshot(
+  userId: string,
+  items: Album[],
+  likedSongs: number,
+): Promise<void> {
   if (!idbAvailable()) return;
   const snap: Snapshot = { ts: Date.now(), items, likedSongs, v: SCHEMA_VERSION };
   try {
-    await idbPut(RECORD_KEY, snap);
+    await idbPut(recordKeyFor(userId), snap);
   } catch {
     // storage full / unavailable — degrade to no client cache
   }
 }
 
-export async function clearSnapshot(): Promise<void> {
+export async function clearSnapshot(userId: string): Promise<void> {
   if (!idbAvailable()) return;
   try {
-    await idbDelete(RECORD_KEY);
+    await idbDelete(recordKeyFor(userId));
   } catch {
     // ignore
   }

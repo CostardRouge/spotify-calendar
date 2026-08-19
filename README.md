@@ -101,6 +101,27 @@ lib/                -> config, auth cookies, Spotify client, pure filter helpers
 - **Data:** the whole saved-albums library is fetched server-side and enriched
   with genres (Spotify tags genres on artists, so a few albums may be untagged).
 
+## Multi-user isolation
+
+The deployment can be shared: every piece of stored data is keyed by the
+Spotify account that produced it, so one user's sync can never display or
+overwrite another user's library.
+
+- **Identity:** at login the callback fetches the Spotify profile and pins the
+  session to its user id (`sp_uid`, httpOnly). Older sessions are resolved and
+  cookied lazily by `/api/me`.
+- **Browser storage:** the IndexedDB snapshot and the sync-job record are both
+  keyed per user id, so several accounts sharing one browser each keep their
+  own copy. Pre-existing single-user data is claimed by the first account that
+  logs in after the upgrade.
+- **Server store:** a completed sync is mirrored to `/api/library` — one JSON
+  file per account under `LIBRARY_DIR` (defaults to `<CACHE_DIR>/library`,
+  persisted by the Home Lab volume). On a fresh browser or another device the
+  app restores your library from there instead of forcing a full re-sync.
+- **Shared, but harmless:** the artist→genre cache (global Spotify data, not
+  user data) and the rate-limit cooldown (the 429 applies to the whole app)
+  remain deployment-wide by design.
+
 ## Demo mode & showcase page
 
 `DEMO_MODE=1` boots the app with a fixture library (real releases, synthetic

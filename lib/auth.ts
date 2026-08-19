@@ -16,7 +16,21 @@ export async function readSession() {
     // Scopes granted at authorization time. Empty for sessions minted before we
     // began tracking this — treated as "unknown" (never blocks) by callers.
     scope: c.get(COOKIE.scope)?.value ?? "",
+    // Spotify user id of the session owner. Empty for sessions minted before
+    // per-user isolation — resolved lazily (and cookied) by /api/me.
+    userId: c.get(COOKIE.userId)?.value ?? "",
   };
+}
+
+/** Persist the Spotify user id of the session owner onto a response. */
+export function writeUserIdCookie(res: NextResponse, userId: string) {
+  res.cookies.set(COOKIE.userId, userId, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30, // matches the refresh token's lifetime
+  });
 }
 
 /** Persist tokens onto a response as httpOnly cookies. */
@@ -54,7 +68,7 @@ export function writeTokenCookies(res: NextResponse, tokens: SpotifyTokens) {
 
 /** Remove all auth cookies from a response. */
 export function clearAuthCookies(res: NextResponse) {
-  [COOKIE.access, COOKIE.refresh, COOKIE.expires, COOKIE.scope, COOKIE.state].forEach((name) =>
+  [COOKIE.access, COOKIE.refresh, COOKIE.expires, COOKIE.scope, COOKIE.state, COOKIE.userId].forEach((name) =>
     res.cookies.set(name, "", { path: "/", maxAge: 0 }),
   );
 }

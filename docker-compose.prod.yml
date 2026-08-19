@@ -16,7 +16,9 @@ services:
       - NODE_ENV=production
       - CACHE_DIR=/app/.cache
     volumes:
-      - spotify-calendar-data:/app/.cache # persist the library cache across restarts
+      # Persists the genre cache AND the per-user library store (which lives
+      # under /app/.cache/library by default) across restarts.
+      - spotify-calendar-data:/app/.cache
     restart: unless-stopped
     healthcheck:
       test:

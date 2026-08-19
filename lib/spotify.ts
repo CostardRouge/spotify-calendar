@@ -225,6 +225,17 @@ async function apiSend(
   }
 }
 
+/** Minimal profile of the authenticated user (GET /me needs no extra scope). */
+export interface SpotifyProfile {
+  id: string;
+  displayName: string;
+}
+
+export async function getMe(token: string): Promise<SpotifyProfile> {
+  const d: any = await apiGet("/me", token);
+  return { id: d?.id ?? "", displayName: d?.display_name ?? "" };
+}
+
 // ---------------------------------------------------------------------------
 // Playback (Spotify Connect) — control the user's active device.
 // ---------------------------------------------------------------------------

@@ -43,7 +43,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 - The image is built once by CI and pulled by the Home Lab stack; `main` and `latest` are the moving tags, `sha-<short>` is the rollback pin. → `docs/memory/deployment.md`
 - `DEMO_MODE=1` is a first-class mode, not a test hack: it powers the GitHub Pages showcase screenshots and lets anyone run the app with no Spotify app. → `docs/memory/demo-and-showcase.md`
 
-- A session that changes code reports this project's state to `PROJETS.md`, at the root of the private `second-brain` repo: the register is that file, never Claude's memory and never `git log` → CLAUDE.md rule 3
+- A session that changes code reports this project's state to its fiche, `projets/spotify-calendar/README.md`, in the private `second-brain` repo: the register is that folder and `PROJETS.md` there is generated from it, never Claude's memory and never `git log` → CLAUDE.md rule 3
 
 ## Open items (dated; remove when done)
 

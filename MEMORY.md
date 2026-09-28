@@ -33,7 +33,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 
 ## Decisions at a glance (details in the topic files)
 
-- Genres are fetched in batches of 50 artist ids, never one request per artist — the per-artist version tripped Spotify's rolling rate window and left the genre filter empty. → `docs/memory/spotify-api.md`
+- Genres cost one paced `GET /artists/{id}` per artist: Spotify removed the bulk `GET /artists?ids=` for Dev Mode apps (Feb 2026), and tracks/albums carry no genre, so there is nothing to derive client-side. Each answer is cached (30 days) as it lands, so a 429 loses nothing. → `docs/memory/spotify-api.md`
 - A long 429 is never retried into: it is surfaced as a typed error, recorded as a server-side cooldown, and the client pre-flights it before every sync request. → `docs/memory/spotify-api.md`
 - The client library snapshot lives in IndexedDB, not localStorage (5 MB cap + synchronous writes made large libraries skip the cache entirely). → `docs/memory/data-and-sync.md`
 - Everything user-scoped is keyed by Spotify user id: the IndexedDB snapshot, the localStorage sync job, and the server-side library files. The artist→genre cache and the rate-limit cooldown stay deployment-wide on purpose (app data, not user data). → `docs/memory/data-and-sync.md`
@@ -51,6 +51,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 - 2026-08-20 — `react-hooks/purity`, `react-hooks/set-state-in-effect` and `react-hooks/refs` are demoted to warnings in `eslint.config.mjs` with a comment calling each one "a genuine cleanup". Nobody has done that cleanup; the warnings are still there. Reworking those effects is its own change and needs the maintainer's go-ahead.
 - 2026-08-20 — the `typescript6` compatibility shim is meant to be dropped "once the tooling supports the TypeScript 7 API" (typescript-eslint issue #10940, per the README). Nothing tracks that upstream issue; someone has to check it periodically.
 - 2026-08-20 — there is no automated test suite and no CI check that runs `npm run lint` or `npm run typecheck`. The two workflows build (Docker, Pages) but neither gates on lint or types, so a type error only surfaces at `next build`. Whether that is acceptable is the maintainer's call.
+- 2026-09-28 — The per-artist genre lookup (`fetchArtistGenres`) was verified with a mocked Spotify only; the cloud session had no credentials. On the first real sync, watch the `[GENRES] looked up …, N with >=1 genre` server log: N stuck at 0 means Spotify returns no genres at all for this app, and only then is an outside source (Last.fm, MusicBrainz) worth considering.
 
 ## Topic files — read before touching the area
 

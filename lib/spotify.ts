@@ -135,7 +135,11 @@ async function apiGet(
   }
 
   if (!res.ok) {
-    throw new Error(`Spotify API ${path} -> ${res.status}`);
+    const err = new Error(`Spotify API ${path} -> ${res.status}`);
+    // Not `status`: mapPlayerError() reads that field, and giving every generic
+    // failure one would silently change what the player routes answer.
+    (err as any).httpStatus = res.status;
+    throw err;
   }
   // 204 No Content (e.g. /me/player when nothing is active) has an empty body,
   // so res.json() would throw — return null instead.
@@ -518,43 +522,60 @@ export async function fetchTracksPage(
 }
 
 /**
- * Fetch genres for a set of artist ids (Spotify tags genres on artists, not
- * albums/tracks). Returns a map artistId -> genres. Best-effort.
- *
- * Uses the bulk "Get Several Artists" endpoint (GET /artists?ids=..., up to 50
- * ids per request). This matters at scale: a large library has thousands of
- * unique artists, and resolving them one-request-per-artist fires thousands of
- * calls that trip Spotify's rolling rate window almost immediately — the 429
- * then aborts the whole genre phase before anything is applied, which is why the
- * genre filter came up completely empty. Batching by 50 cuts that to a few dozen
- * requests for the same library.
+ * Pause between two artist lookups: ~2.5 requests/s, ~75 per 30s rolling
+ * window. Spotify does not publish the Development Mode limit; this is a
+ * conservative guess, and a 429 is still handled (short ones waited out by
+ * apiGet, long ones surfaced) — the pacing only keeps us from provoking it.
  */
-export async function fetchArtistGenresBatch(
+const ARTIST_PACE_MS = 400;
+
+/**
+ * Resolve genres for artist ids, one `GET /artists/{id}` per artist, reporting
+ * each result through `onResult` as soon as it lands.
+ *
+ * Why one request per artist: Spotify tags genres on artists only (a track, an
+ * album or the simplified artist inside them carries none — `album.genres` is
+ * documented as always empty), and the bulk "Get Several Artists" endpoint
+ * (`GET /artists?ids=`) was removed for Development Mode apps in the February
+ * 2026 Web API change (existing apps migrated 2026-03-09). The single-artist
+ * endpoint is kept and still returns `genres`.
+ *
+ * The previous per-artist attempt (f57200e) failed for two reasons this avoids:
+ * results were only returned at the end, so the first 429 threw away a whole
+ * chunk of already-fetched artists; and it fired ~12 requests/s. Here every
+ * answer is handed to the caller (which caches it) before the next request, and
+ * the pace is ARTIST_PACE_MS.
+ *
+ * `definitive` is false for a transient failure (5xx/network after apiGet's
+ * bounded retries): the caller must not cache that empty answer. A 404/400 is
+ * definitive — the id is gone, asking again will not help.
+ *
+ * Stops starting new lookups once `deadline` passes, so the caller can return
+ * inside its route budget; ids never reported are the caller's to retry.
+ * Throws on 429 / 401 / 403: a rate limit or auth failure must never be
+ * swallowed (it would mark the sync "done" with an empty genre filter), and a
+ * 403 means the endpoint is refused for every artist — hitting it thousands of
+ * times would only burn the rate window.
+ */
+export async function fetchArtistGenres(
   token: string,
   ids: string[],
-): Promise<Record<string, string[]>> {
-  const map: Record<string, string[]> = {};
+  deadline: number,
+  onResult: (id: string, genres: string[], definitive: boolean) => void,
+): Promise<void> {
   const unique = [...new Set(ids.filter(Boolean))];
-  for (let i = 0; i < unique.length; i += 50) {
-    const batch = unique.slice(i, i + 50);
-    if (!batch.length) continue;
-    // Gentle pacing between chunks so a large library never bursts through the
-    // rolling rate window.
-    if (i > 0) await sleep(120);
+  for (let i = 0; i < unique.length; i++) {
+    if (i > 0) await sleep(ARTIST_PACE_MS);
+    if (Date.now() >= deadline) return;
+    const id = unique[i];
     try {
-      const d: any = await apiGet("/artists?ids=" + batch.join(","), token);
-      // The /artists?ids= response echoes artists in request order with the same
-      // ids, so keying by a.id lines up with the ids the route asked for.
-      for (const a of d?.artists ?? []) {
-        if (a?.id) map[a.id] = Array.isArray(a.genres) ? a.genres : [];
-      }
+      const a: any = await apiGet("/artists/" + encodeURIComponent(id), token);
+      onResult(id, Array.isArray(a?.genres) ? a.genres : [], true);
     } catch (e) {
-      // A rate limit / auth failure must NOT be swallowed: doing so returns empty
-      // genres for the run and marks the sync "done" with an empty genre filter.
-      // Surface it so the caller can back off and let the user resume.
-      if ((e as any)?.status === 429 || (e as any)?.status === 401) throw e;
-      // Other transient errors stay non-fatal: leave those artists ungenred.
+      const status = (e as any)?.status;
+      if (status === 429 || status === 401 || status === 403) throw e;
+      const http = (e as any)?.httpStatus;
+      onResult(id, [], http === 404 || http === 400);
     }
   }
-  return map;
 }

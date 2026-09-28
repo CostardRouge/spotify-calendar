@@ -100,6 +100,10 @@ lib/                -> config, auth cookies, Spotify client, pure filter helpers
   non-root, healthcheck) with matching Compose files.
 - **Data:** the whole saved-albums library is fetched server-side and enriched
   with genres (Spotify tags genres on artists, so a few albums may be untagged).
+  Since Spotify's February 2026 API change there is no bulk artist lookup: genres
+  resolve one paced request per artist (~0.4 s each), so the first pass on a
+  large library takes a while and may pause on a rate limit; results are cached
+  for 30 days under `CACHE_DIR`, so later syncs only look up new artists.
 
 ## Multi-user isolation
 

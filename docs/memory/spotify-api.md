@@ -2,18 +2,17 @@
 
 Read before touching anything that calls Spotify: pagination, genres, rate limits, scopes, playback.
 
-## Batch artist genres, 50 ids per request — and do not undo this again (2026-08-20)
+## Genres: one paced request per artist, because the bulk endpoint is gone (2026-09-28)
 
-Spotify tags genres on **artists**, not on albums or tracks, so the genre filter depends entirely on resolving artist ids. This has been decided twice, in opposite directions:
+Spotify tags genres on **artists** only. A saved track, a saved album and the simplified artist objects inside them carry none (`album.genres` is documented as always empty), so genres cannot be derived from the downloaded library — the maintainer asked for exactly that on 2026-09-28, and it is not possible without an artist lookup.
 
-- `f57200e` (2026-07-18) rewrote `fetchArtistGenresBatch()` to one request per artist, on the stated belief that "Spotify removed the GET /artists?ids= bulk endpoint in February 2026", and dropped `GENRE_CHUNK` from 400 to 200 to fit the 120s route budget.
-- `89bf80d` reverted that: with ~4,300 unique artists in the maintainer's library, one-request-per-artist fires thousands of sequential calls, trips the rolling rate window almost immediately, and the resulting 429 aborts the whole genre phase **before any genre is applied** — so the filter and the Stats "Genres" count came up completely empty. The bulk endpoint was restored (50 ids per request, a few dozen calls for the same library) and the removal claim was called inaccurate in the commit body.
+`GET /artists?ids=` ("Get Several Artists") **was removed** for Development Mode apps in the February 2026 Web API change (existing apps migrated 2026-03-09); the same change stripped `popularity`/`followers`. The note that stood here from 2026-08-20 ("`GET /artists?ids=` works", `89bf80d` calling the removal "inaccurate") was wrong: `f57200e` had the diagnosis right. Its per-artist version failed for two other reasons: results were returned only at the end, so the first 429 discarded a whole chunk of fetched artists, and it fired ~12 requests/s. `GET /artists/{id}` still returns `genres`.
 
-**How to apply**: `GET /artists?ids=` works. Do not "adapt" to a removal report without reproducing it against the live API first, and never resolve genres one artist at a time. The 120ms pause between chunks in `fetchArtistGenresBatch` is deliberate pacing — keep it.
+**How to apply**: `fetchArtistGenres` reports each artist through a callback that caches it immediately, paces at `ARTIST_PACE_MS` (400 ms, a guess — Spotify does not publish the Dev Mode limit), and stops at a deadline so `/api/genres` fits its 120 s budget, returning unreached ids in `pending`. Genre cache entries live 30 days (`getCache(key, maxAgeMs)`), not the 1 h global TTL — otherwise every hourly refresh re-queries every genre-less artist. The key prefix is `genre-v2:` because the dead bulk call left an empty list cached for every artist under `genre:`. First pass on the maintainer's ~4,300 artists is ~30 min plus any 429 pause. If a genre source outside Spotify is ever needed (Last.fm tags, MusicBrainz), it would be a new external dependency — not tried yet.
 
-## A rate-limit or auth error during the genre phase must propagate (2026-08-20)
+## A rate-limit, auth or 403 error during the genre phase must propagate (2026-09-28)
 
-`fetchArtistGenresBatch` swallows transient errors (those artists stay ungenred) but **rethrows** 429 and 401. Swallowing them returns an empty genre map, the sync marks itself "done", and the user is left with a silently empty filter and no reason to retry — the exact bug above. **How to apply**: keep the `if (status === 429 || status === 401) throw` branch; when adding a new best-effort lookup, make the same distinction.
+`fetchArtistGenres` reports transient failures as non-definitive (not cached, retried next sync) and 404/400 as definitive empty, but **rethrows** 429, 401 and 403. Swallowing a 429/401 returns empty genres, the sync marks itself "done", and the filter stays silently empty. A 403 means the endpoint is refused for everyone: the route answers `genres_unavailable` and the client ends the phase instead of firing thousands of doomed calls. Error bodies still carry the genres resolved before the failure. **How to apply**: when adding a best-effort lookup, make the same distinction.
 
 ## Never retry into a long ban; pre-flight the cooldown instead (2026-08-20)
 
@@ -21,7 +20,7 @@ Spotify tags genres on **artists**, not on albums or tracks, so the genre filter
 
 `lib/rateLimit.ts` therefore records the cooldown in the server process and `GET /api/ratelimit` lets the client ask "may I sync yet?" **without** making a Spotify call. `SyncProvider` pre-flights it before firing. The record is in-memory only (a restart clears it) because the client persists the cooldown too, and the two together cover the common cases.
 
-**How to apply**: do not add a Spotify call to any polling path, and do not remove the pacing sleeps (250ms between library pages, 120ms between genre chunks) — they exist to stay under the rolling window on large libraries, not as arbitrary caution.
+**How to apply**: do not add a Spotify call to any polling path, and do not remove the pacing sleeps (250ms between library pages, 400ms between artist lookups) — they exist to stay under the rolling window on large libraries, not as arbitrary caution.
 
 The cooldown is **deployment-wide on purpose**: a 429 applies to the whole app (one Spotify client id), not to one user. Same for the artist→genre cache — that is global Spotify data. Everything else is keyed per user (see `data-and-sync.md`).
 

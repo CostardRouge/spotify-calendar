@@ -17,6 +17,8 @@ TypeScript 7 ships the native (Go) compiler and no longer exposes the old JavaSc
 
 **How to apply**: regenerate the lockfile with npm 11+ (`npm install --package-lock-only`), never hand-edit it, and if your local npm is older than 11 say so rather than committing a lockfile it produced. Verify with `npm ci`.
 
+It happened again on 2026-09-28: a local "DEV JUNK" commit (`9b8035e`) rode into a PR merge with a lockfile rewritten by an older npm — it dropped the peer-optional `@emnapi/core`, `@emnapi/runtime`, `@emnapi/wasi-threads` entries (needed by `@napi-rs/wasm-runtime`) and every `libc: ["glibc"]` field. CI's `npm ci` then failed with `Missing: @emnapi/core@2.0.0-alpha.5 from lock file`; the Docker build hides it because its `npm ci || npm install` falls back. **Remedy**: restore the last lockfile that passed, check with `npx npm@11 ci --dry-run`. **Symptom to spot in review**: a lockfile diff that only deletes `@emnapi/*` blocks and `libc` lines. The same commit also carried `next-env.d.ts` flipped to `./.next/dev/types/routes.d.ts`, which `next dev` writes and `next build` writes back to `./.next/types/…` — never commit the `dev` variant.
+
 ## `next lint` no longer exists (2026-08-20)
 
 Next 16 removed it. ESLint is invoked directly (`npm run lint`) against the flat `eslint.config.mjs`, which spreads `eslint-config-next` and ignores `.next/`, `node_modules/`, `site/`, `public/` and `next-env.d.ts`.

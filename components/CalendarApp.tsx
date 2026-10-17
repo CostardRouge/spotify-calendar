@@ -42,7 +42,15 @@ const latestOf = (list: Album[]) =>
     new Date(0),
   );
 
-export default function CalendarApp({ initialView }: { initialView: ViewMode }) {
+export default function CalendarApp({
+  initialView,
+  version,
+}: {
+  initialView: ViewMode;
+  // package.json's version, read on the server (lib/version.ts) — never
+  // imported here, or the whole package.json would ship to the browser.
+  version: string;
+}) {
   const { items, hydrated, job, isRunning, start } = useSync();
 
   const [filters, setFilters] = useState<Filters>(emptyFilters());
@@ -214,6 +222,9 @@ export default function CalendarApp({ initialView }: { initialView: ViewMode }) 
           <button className="btn" onClick={logout}>
             Log out
           </button>
+          <div className="version" title="spotify-calendar version">
+            v{version}
+          </div>
         </div>
       </header>
 

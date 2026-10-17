@@ -33,3 +33,9 @@ Real values live only in the untracked `.env` on the maintainer's machine and on
 ## The Makefile is the interface, not raw docker commands (2026-08-20)
 
 `make help` is the default goal and lists every target from its `##` comments. Dev: `init`, `build`, `up`, `start`, `down`, `restart`, `reset`, `logs`, `shell`. Home Lab: `prod-pull`, `prod-up`, `prod-start`, `prod-down`, `prod-logs`, `prod-deploy`. **How to apply**: a new operational command belongs in the Makefile with a `##` description, so it shows up in help.
+
+## Versions and releases ride beside the deploy, not in front of it (2026-10-17)
+
+`.github/workflows/release.yml` + `.github/release.mjs` (identical across the portfolio, C13) check `CHANGELOG.md` against `package.json` on every pull request and, on `main`, tag each section `vX.Y.Z` and create its GitHub Release. The Docker publish and the Pages showcase still run on **every** push to `main`; a release changes nothing about them. **Trap, for the day deploys follow releases**: a tag or Release created with the workflow's `GITHUB_TOKEN` triggers no other workflow, so `docker-build.yml` cannot listen for `on: release` — it has to become a job of `release.yml`'s `publish`, or be called from it. The image is still tagged `main` / `latest` / `sha-<short>` only; a `:x.y.z` tag per release is the natural next step then.
+
+The running version is shown in the topbar's options (`lib/version.ts`, a named import of `package.json`'s `version`). **How to apply**: import `lib/version.ts` from server code only and pass the string down as a prop, as `app/[view]/page.tsx` does for `CalendarApp`. Turbopack does not tree-shake a JSON module: imported into a `"use client"` component, the first attempt put the whole `package.json` (every dependency and its version) into a browser chunk — after touching it, `grep -rl eslint-config-next .next/static` must find nothing.

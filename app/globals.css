@@ -140,6 +140,12 @@ a { color: var(--accent); text-decoration: none; }
 .topbar-actions .stat .stat-sep { opacity: .7; }
 .topbar-actions .sync-widget { padding: 0 14px; }
 .topbar-actions .btn { padding: 0 16px; }
+/* The running build's version (lib/version.ts): quieter still than the
+   counter — something to look up, not something to read every visit. */
+.topbar-actions .version {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .02em;
+  color: var(--muted); opacity: .8;
+}
 
 /* ---- Buttons ---- */
 .btn {
@@ -640,6 +646,7 @@ html.app-ready .side {
   .topbar-actions .sync-widget { justify-content: flex-start; }
   .topbar-actions .sync-mini { margin-left: auto; }
   .topbar-actions .btn { justify-content: center; }
+  .topbar-actions .version { text-align: center; }
 
   /* Bottom tab bar — one tab per view. */
   .bottomnav {

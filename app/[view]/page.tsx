@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { ViewMode } from "@/lib/dates";
 import CalendarApp from "@/components/CalendarApp";
+import { APP_VERSION } from "@/lib/version";
 
 const VIEWS: ViewMode[] = ["month", "week", "day", "year", "list", "stats"];
 
@@ -18,5 +19,6 @@ export default async function ViewPage({
 }) {
   const { view } = await params;
   if (!(VIEWS as string[]).includes(view)) notFound();
-  return <CalendarApp initialView={view as ViewMode} />;
+  // The version is read here, on the server, and passed down: see lib/version.ts.
+  return <CalendarApp initialView={view as ViewMode} version={APP_VERSION} />;
 }

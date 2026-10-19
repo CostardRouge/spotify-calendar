@@ -87,7 +87,8 @@ lib/                -> config, auth cookies, Spotify client, pure filter helpers
 ```
 
 - **Framework:** Next.js 16 (App Router, Turbopack) + React 19 + TypeScript 7,
-  `output: "standalone"`. Requires Node.js 20.9+ (images and CI run Node 24).
+  `output: "standalone"`. Node 24 (`.nvmrc`, what CI and the Docker images run);
+  `engines` keeps the floor at 22.
 - **TypeScript:** `npm run typecheck` runs the TypeScript 7 native compiler.
   TypeScript 7 no longer ships the old JavaScript compiler API, so
   `node_modules/typescript` is the `@typescript/typescript6` compatibility
@@ -96,6 +97,10 @@ lib/                -> config, auth cookies, Spotify client, pure filter helpers
   TypeScript 7 API (typescript-eslint tracks this in issue #10940).
 - **Lint:** `npm run lint` calls ESLint directly via `eslint.config.mjs` —
   `next lint` was removed in Next 16.
+- **CI:** `.github/workflows/ci.yml` runs lint, typecheck and build on every
+  pull request and on `main`, then builds the Docker image and checks its
+  `/api/health`. Dependabot proposes dependency, action and base-image updates
+  weekly.
 - **Docker:** `Dockerfile.dev` (hot reload) and `Dockerfile` (multi-stage,
   non-root, healthcheck) with matching Compose files.
 - **Data:** the whole saved-albums library is fetched server-side and enriched

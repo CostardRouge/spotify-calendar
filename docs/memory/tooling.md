@@ -7,6 +7,7 @@ Read before touching `package.json`, the lockfile, `tsconfig.json`, `eslint.conf
 The spec lives in the private `second-brain` repo; this repo adopted it on 2026-10-19 and the rules below are now in force here. **How to apply**: a change to one of them is a change to the spec first, then pasted here — never the reverse.
 
 - **Scaffold**: `CLAUDE.md` states the repository's visibility (public, measured 2026-10-19) so a Registry block never carries a `Last point:` or an open box; the commit template names no `Co-Authored-By` spelling of its own — the trailer is whatever the harness asks for (K2); `.claude/commands/memorize.md` is the canonical text (K6), which pushes from a cloud session and never from a local one; `AGENTS.md` is a symlink to `CLAUDE.md` (K1). Trap fixed on the way: `tsconfig.json`'s `include` carried `/tmp/nbuild/types/**/*.ts`, a path a build with a moved `distDir` once wrote; Next rewrites that list on its own, so an absolute path there is always a leftover to delete.
+- **Toolchain and gate (C14, C15)**: Node pinned as the entry below says; `.github/workflows/ci.yml` on `pull_request` and `main` — lint, typecheck, build, then the Docker image built and health-checked; `.github/dependabot.yml` (npm weekly with dev dependencies grouped and `@types/node` held to `.nvmrc`'s major, the workflows' actions, the Docker base image). ESLint stays the linter: it already existed, and Biome is the spec's choice for a new project only. `ci.yml` uses `actions/checkout@v7` and `actions/setup-node@v7`, the versions `release.yml` and the spec's model (`tamalou`) run on; `pages.yml` and `docker-build.yml` keep their older pins until Dependabot raises them.
 
 ## The `typescript` / `typescript7` devDependency pair is deliberate (2026-08-20)
 
@@ -33,13 +34,13 @@ Next 16 removed it. ESLint is invoked directly (`npm run lint`) against the flat
 
 `eslint-plugin-react-hooks` v7 (pulled in by `eslint-config-next` 16) added React Compiler-backed rules that flag long-standing patterns here: mount flags, URL-state hydration, and a `Date.now()` read during render. `react-hooks/purity`, `react-hooks/set-state-in-effect` and `react-hooks/refs` are set to `warn` so lint passes while the findings stay visible. The comment in the config calls each one "a genuine cleanup" — the demotion is a deferral, not a dismissal. **How to apply**: do not silence them further, and do not promote them to errors without doing the effect rework, which is its own change.
 
-## Node and version floors (2026-08-20)
+## Node: 24 in `.nvmrc`, the floor at 22, an exact tag in Docker (2026-08-20, rev. 2026-10-19)
 
-`engines.node` is `>=20.9.0` (Next 16's floor); the Docker images and both GitHub workflows run Node 24. **How to apply**: a Node-24-only API will pass CI and break a maintainer running 20.x locally — target the floor, not what CI happens to have.
+`.nvmrc` says `24`, which CI (`ci.yml`, `pages.yml` through `node-version-file`) runs; `engines.node` is `>=22`, the portfolio's floor (C14) — Next 16 itself only needs 20.9, so the floor is a policy, not a framework constraint. Both Dockerfiles pin `node:24.22.0-alpine`: an exact tag and never a moving major, because a floating tag ships a runtime nobody tested (spotify-poller's `node:24` once pulled 24.19.0, which crashed better-sqlite3); Dependabot's `docker` block proposes each new 24.x. **How to apply**: a Node-24-only API will pass CI and break a maintainer on 22 — target the floor, not what CI happens to have; raise the two Dockerfiles together, and `.nvmrc` only with a new major.
 
-## What "verified" means here (2026-08-20)
+## What "verified" means here (2026-08-20, rev. 2026-10-19)
 
-There is no test suite. Verification is `npm run build`, `npm run lint`, `npm run typecheck`, plus looking at the running app (`DEMO_MODE=1 npm run dev` when you have no Spotify credentials). Neither workflow gates on lint or typecheck — the Docker and Pages builds only run `next build` — so a type or lint regression reaches `main` unless you run them yourself.
+There is no test suite. Verification is `npm run build`, `npm run lint`, `npm run typecheck`, plus looking at the running app (`DEMO_MODE=1 npm run dev` when you have no Spotify credentials). `.github/workflows/ci.yml` runs those three on every pull request and on `main` and, in a second job, builds the production image and polls its `/api/health`; the Docker and Pages builds still only run `next build`, so a lint or type regression is caught by CI's `verify` job, not by them. Run the same commands before committing: a red job is a broken pull request.
 
 ## Sandboxed agent environments (2026-08-20)
 

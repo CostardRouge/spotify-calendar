@@ -1,0 +1,69 @@
+name: CI
+
+# The pull request gate (COMMON-PROJECT-SPEC, C15): what CLAUDE.md calls the
+# gate runs on every pull request and on main, on the Node of .nvmrc. The Docker
+# image the Home Lab runs is built and asked for its health check here too,
+# because docker-build.yml only builds it after a merge — a Dockerfile that no
+# longer builds, or an image that no longer boots, used to be found on main.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint, typecheck, build
+    # Named rather than ubuntu-latest, which moves to Ubuntu 26 from 2026-10-19.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci` validates the lockfile against package.json: a lockfile written
+      # by an older npm fails here, on purpose (docs/memory/tooling.md).
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # The production build needs no Spotify credentials: the app reads them at
+      # request time, and the showcase builds the same way.
+      - name: Build
+        run: npm run build
+
+  docker:
+    name: Home Lab image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build
+        run: docker build -t spotify-calendar .
+
+      # /api/health needs no configuration; the Home Lab's own healthcheck polls it.
+      - name: Start and check health
+        run: |
+          docker run -d --name spotify-calendar -p 3000:3000 spotify-calendar
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:3000/api/health && exit 0; sleep 2; done
+          docker logs spotify-calendar
+          exit 1

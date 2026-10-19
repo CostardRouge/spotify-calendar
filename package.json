@@ -4,7 +4,7 @@
   "private": true,
   "description": "Browse your saved Spotify albums on a calendar, grouped by the day you added them.",
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "next dev",

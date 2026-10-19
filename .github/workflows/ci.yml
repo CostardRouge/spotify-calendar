@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   verify:
-    name: Lint, typecheck, build
+    name: Lint, typecheck, test, build
     # Named rather than ubuntu-latest, which moves to Ubuntu 26 from 2026-10-19.
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -44,6 +44,10 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      # Node's own runner over tests/, the TypeScript stripped by Node itself.
+      - name: Test
+        run: npm test
 
       # The production build needs no Spotify credentials: the app reads them at
       # request time, and the showcase builds the same way.

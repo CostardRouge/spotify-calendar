@@ -33,7 +33,6 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "/tmp/nbuild/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [

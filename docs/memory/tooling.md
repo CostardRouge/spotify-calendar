@@ -1,6 +1,12 @@
-# Tooling — TypeScript, ESLint, npm, Node
+# Tooling — TypeScript, ESLint, npm, Node, the portfolio standard
 
-Read before touching `package.json`, the lockfile, `tsconfig.json`, `eslint.config.mjs`, or Node versions.
+Read before touching `package.json`, the lockfile, `tsconfig.json`, `eslint.config.mjs`, Node versions, the agent scaffold (`CLAUDE.md`, `.claude/`, `AGENTS.md`) or anything the portfolio standard governs.
+
+## The portfolio standard (COMMON-PROJECT-SPEC.md C14–C19) applied (2026-10-19)
+
+The spec lives in the private `second-brain` repo; this repo adopted it on 2026-10-19 and the rules below are now in force here. **How to apply**: a change to one of them is a change to the spec first, then pasted here — never the reverse.
+
+- **Scaffold**: `CLAUDE.md` states the repository's visibility (public, measured 2026-10-19) so a Registry block never carries a `Last point:` or an open box; the commit template names no `Co-Authored-By` spelling of its own — the trailer is whatever the harness asks for (K2); `.claude/commands/memorize.md` is the canonical text (K6), which pushes from a cloud session and never from a local one; `AGENTS.md` is a symlink to `CLAUDE.md` (K1). Trap fixed on the way: `tsconfig.json`'s `include` carried `/tmp/nbuild/types/**/*.ts`, a path a build with a moved `distDir` once wrote; Next rewrites that list on its own, so an absolute path there is always a leftover to delete.
 
 ## The `typescript` / `typescript7` devDependency pair is deliberate (2026-08-20)
 

@@ -9,6 +9,11 @@ history's turning points.
 
 ## [Unreleased]
 
+### Added
+
+- The showcase page (costardrouge.github.io/spotify-calendar) carries a legal notice — who publishes it, who hosts
+  it, what it knows about a visitor (nothing) — and shows a proper card when its link is pasted somewhere.
+
 ### Fixed
 
 - The icon added to an iPhone's home screen no longer comes back framed in black: it is opaque now. Browsers that

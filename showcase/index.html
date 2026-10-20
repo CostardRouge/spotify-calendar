@@ -5,9 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>spotify-calendar — see your library as a calendar</title>
 <meta name="description" content="A self-hosted Next.js app that lays your saved Spotify albums and liked songs on a calendar, grouped by the day you added them." />
-<meta property="og:title" content="spotify-calendar" />
-<meta property="og:description" content="Your Spotify library, laid out on a calendar — month, week, year, list and stats views, with filters and playback control." />
-<meta property="og:image" content="screenshots/month.png" />
+<link rel="canonical" href="https://costardrouge.github.io/spotify-calendar/" />
+<!-- Link previews (COMMON-PROJECT-SPEC, C17): the app's own 1200 × 630 card, copied beside the page by pages.yml; absolute, as previews need. -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="spotify-calendar" />
+<meta property="og:url" content="https://costardrouge.github.io/spotify-calendar/" />
+<meta property="og:title" content="spotify-calendar — every album, on the day you saved it" />
+<meta property="og:description" content="Your Spotify library, laid out on a calendar — month, week, year, list and stats views, with filters and playback control. Self-hosted, shown on screenshots of its real interface over a demo library." />
+<meta property="og:image" content="https://costardrouge.github.io/spotify-calendar/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="spotify-calendar — a contact sheet of album covers laid out by the day you saved them." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="spotify-calendar — every album, on the day you saved it" />
+<meta name="twitter:description" content="Your Spotify library, laid out on a calendar — month, week, year, list and stats views, with filters and playback control." />
+<meta name="twitter:image" content="https://costardrouge.github.io/spotify-calendar/og-image.png" />
 <!-- The icon set (COMMON-PROJECT-SPEC, C11), copied from public/icons by pages.yml; relative, the page lives under /spotify-calendar/. -->
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -172,6 +184,12 @@
   .col h3::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--accent); }
   .col p { margin: 0; color: var(--muted); font-size: 14px; }
 
+  /* --- legal notice --- */
+  .legal { padding-top: 56px; padding-bottom: 8px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: 14px; }
+  .legal h2 { font-size: 22px; color: var(--text); }
+  .legal h3 { color: var(--text); font-size: 15px; font-weight: 600; margin: 22px 0 6px; }
+  .legal p { margin: 0 0 8px; max-width: 72ch; }
+
   /* --- footer --- */
   footer {
     margin-top: 90px; border-top: 1px solid var(--line-soft);
@@ -311,11 +329,25 @@
 
 </main>
 
+<section class="legal wrap" id="legal" aria-labelledby="legal-title">
+  <div class="kicker">Legal notice</div>
+  <h2 id="legal-title">Who publishes this page, and what it knows about you</h2>
+  <h3>Publisher</h3>
+  <p>This page is published by <b>Steeve Pommier</b>, a private individual, on a non-commercial basis: it is free, shows no ads and sells nothing. As a non-professional publisher, the identification details required by French law (Loi pour la confiance dans l’économie numérique, art. 6-III) are kept with the host named below. Contact: through <a href="https://github.com/CostardRouge/spotify-calendar">the repository on GitHub</a>.</p>
+  <h3>Hosting</h3>
+  <p><b>costardrouge.github.io/spotify-calendar</b> is served by GitHub Pages: GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, United States, <a href="https://github.com">github.com</a>. Like any host, GitHub processes your IP address to deliver the page; see <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub’s privacy statement</a>.</p>
+  <h3>What this page knows about you</h3>
+  <p>Nothing. It loads no tracker, no analytics script and no third-party resource, sets no cookie and stores nothing in your browser; nobody counts your visit. The screenshots show the application over a demo library of real releases with invented save dates, generated in its build pipeline — no real Spotify account and no real library were involved.</p>
+  <p>The application itself is self-hosted by whoever installs it, on their own machine, where their Spotify library and tokens stay: this page does not run it and holds none of it.</p>
+  <h3>Licence</h3>
+  <p>spotify-calendar is free software: its <a href="https://github.com/CostardRouge/spotify-calendar">source code</a> is published under the <a href="https://github.com/CostardRouge/spotify-calendar/blob/main/LICENSE">MIT licence</a>. Spotify is a trademark of Spotify AB; this project is not affiliated with it.</p>
+</section>
+
 <footer>
   <div class="wrap">
     <span><span class="dot" style="width:9px;height:9px"></span>&nbsp; spotify-calendar</span>
     <span class="spacer"></span>
-    <span>Screenshots are generated automatically in CI from a demo library of real releases — no personal data.</span>
+    <span>Screenshots are generated automatically in CI from a demo library of real releases — no personal data. <a href="#legal">Legal notice</a></span>
   </div>
 </footer>
 

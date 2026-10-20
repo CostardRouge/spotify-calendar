@@ -150,7 +150,10 @@ on every push to `main` it builds the app, boots it in demo mode, captures
 real screenshots with Playwright (`scripts/showcase-screenshots.mjs`), and
 deploys the landing page in `showcase/` to GitHub Pages. One-time setup:
 **Settings → Pages → Source: "GitHub Actions"**. Regenerate the fixture
-library with `node scripts/build-demo-library.mjs`.
+library with `node scripts/build-demo-library.mjs`. The page is a public one:
+it carries a canonical address, link-preview tags, the app's icons and a
+legal notice (publisher, host, what it knows about a visitor — nothing: it
+loads no script and no third-party resource, which `npm test` holds it to).
 
 ## Notes
 

@@ -1,0 +1,16 @@
+<!-- Full bleed for Android's adaptive launcher masks. The drawing is icon.svg's
+     at 70 %, centred, so it stays inside the safe zone (the centred circle of
+     80 % diameter, radius 25.6 from (32, 32)): the page's farthest corner, at
+     (13.1, 15.7) before its rounding, is 25.0 away, and its 4.5 radius brings
+     the paint under 24. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<rect width="64" height="64" fill="#211f1a"/>
+<g transform="translate(9.6 9.6) scale(0.7)">
+<rect x="5" y="8.78" width="54" height="46.44" rx="6.48" fill="#efe9dd"/>
+<path d="M5 15.26a6.48 6.48 0 0 1 6.48-6.48h41.04a6.48 6.48 0 0 1 6.48 6.48v4.6656h-54z" fill="#b0532f"/>
+<rect x="19.58" y="5.9936" width="3.24" height="7.4304" rx="1.62" fill="#211f1a"/>
+<rect x="41.18" y="5.9936" width="3.24" height="7.4304" rx="1.62" fill="#211f1a"/>
+<circle cx="32" cy="37.5728" r="9.288" fill="#b0532f"/>
+<circle cx="32" cy="37.5728" r="2.7864" fill="#efe9dd"/>
+</g>
+</svg>

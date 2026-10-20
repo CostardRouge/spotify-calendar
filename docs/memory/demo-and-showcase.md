@@ -14,7 +14,7 @@ Read before touching `DEMO_MODE`, `lib/demo.ts`, `lib/demo-library.json`, `showc
 
 ## Screenshots are captured against a running app (2026-08-20)
 
-`.github/workflows/pages.yml` on every push to `main`: `npm ci` → install Playwright chromium → `npm run build` → start with `DEMO_MODE=1` → poll `/api/health` until it answers → `node scripts/showcase-screenshots.mjs site/screenshots` → copy `showcase/index.html`, `public/favicon.svg` and `public/og-image.png` into `site/` → deploy.
+`.github/workflows/pages.yml` on every push to `main`: `npm ci` → install Playwright chromium → `npm run build` → start with `DEMO_MODE=1` → poll `/api/health` until it answers → `node scripts/showcase-screenshots.mjs site/screenshots` → copy `showcase/index.html`, `public/og-image.png` and the whole `public/icons/` (the app's icon set, which the showcase's head links to relatively — `frontend.md`) into `site/` → deploy.
 
 Consequences worth knowing:
 
@@ -23,3 +23,7 @@ Consequences worth knowing:
 - The script waits for every visible `<img>` to settle, then pauses 400 ms for lazy decodes, and captures anyway on timeout rather than failing the build.
 - `FAKE_COVERS=1` replaces the album-art CDN with generated placeholders for offline or sandboxed local runs. CI leaves it unset and loads real art. Never commit screenshots taken with it.
 - One-time repo setup, not reproducible from code: **Settings → Pages → Source: "GitHub Actions"**.
+
+## The showcase is a public page, and is treated as one (2026-10-19)
+
+**Decision** (the portfolio standard, C17): `showcase/index.html` carries a meta description, a canonical address (`https://costardrouge.github.io/spotify-calendar/`), OpenGraph and Twitter tags whose image is the app's own 1200 × 630 card (`public/og-image.png`, copied beside the page by `pages.yml` and named by its absolute address, as previews need — not a screenshot), the app's icon set (`frontend.md`) and a legal notice whose facts are copied from Versus's and spotify-poller's notices: publisher Steeve Pommier, a private individual; host GitHub Pages (GitHub, Inc.'s address); no measurement at all — the page loads no tracker, no script and no third-party resource, which is the fact the notice states and `tests/showcase.test.ts` keeps true (no `<script`, no remote `src`, no remote stylesheet, one `h1`, the card's size); MIT. The app itself is not a public page: it sits behind Spotify's OAuth on whoever's machine runs it, so it carries no notice and no measurement. **Not done, by choice for now**: a French twin of the page (N4 asks for English and French on a public page; the showcase is English only, like spotify-poller's, and an exception is not written in `CLAUDE.md` because none was decided — the owner's call), and Umami (R: the notice would then have to list what is sent). **How to apply**: a tracker, a font or a script added to the page changes the notice and the test in the same commit; a renamed `og-image.png` breaks the preview silently — the test reads the file by name.

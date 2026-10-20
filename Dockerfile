@@ -1,16 +1,21 @@
 # ---------------------------------------------------------------------------
 # Production / Home Lab image (Dell OptiPlex).
 # Multi-stage build producing a minimal Next.js "standalone" server.
+#
+# The base image is an exact tag (COMMON-PROJECT-SPEC, C14): a floating
+# `node:24-alpine` ships whichever runtime the registry holds that day, which
+# nobody here tested. Dependabot (.github/dependabot.yml, docker) proposes each
+# new 24.x; Dockerfile.dev moves with it.
 # ---------------------------------------------------------------------------
 
 # 1) Install dependencies -----------------------------------------------------
-FROM node:24-alpine AS deps
+FROM node:24.22.0-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci || npm install
 
 # 2) Build --------------------------------------------------------------------
-FROM node:24-alpine AS builder
+FROM node:24.22.0-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
@@ -18,7 +23,7 @@ COPY . .
 RUN npm run build
 
 # 3) Runtime ------------------------------------------------------------------
-FROM node:24-alpine AS runner
+FROM node:24.22.0-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

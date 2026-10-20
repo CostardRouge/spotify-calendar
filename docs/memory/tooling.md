@@ -1,6 +1,17 @@
-# Tooling — TypeScript, ESLint, npm, Node
+# Tooling — TypeScript, ESLint, npm, Node, the portfolio standard
 
-Read before touching `package.json`, the lockfile, `tsconfig.json`, `eslint.config.mjs`, or Node versions.
+Read before touching `package.json`, the lockfile, `tsconfig.json`, `eslint.config.mjs`, Node versions, the agent scaffold (`CLAUDE.md`, `.claude/`, `AGENTS.md`) or anything the portfolio standard governs.
+
+## The portfolio standard (COMMON-PROJECT-SPEC.md C14–C19) applied (2026-10-19)
+
+The spec lives in the private `second-brain` repo; this repo adopted it on 2026-10-19 and the rules below are now in force here. **How to apply**: a change to one of them is a change to the spec first, then pasted here — never the reverse.
+
+- **Scaffold**: `CLAUDE.md` states the repository's visibility (public, measured 2026-10-19) so a Registry block never carries a `Last point:` or an open box; the commit template names no `Co-Authored-By` spelling of its own — the trailer is whatever the harness asks for (K2); `.claude/commands/memorize.md` is the canonical text (K6), which pushes from a cloud session and never from a local one; `AGENTS.md` is a symlink to `CLAUDE.md` (K1). Trap fixed on the way: `tsconfig.json`'s `include` carried `/tmp/nbuild/types/**/*.ts`, a path a build with a moved `distDir` once wrote; Next rewrites that list on its own, so an absolute path there is always a leftover to delete.
+- **Toolchain and gate (C14, C15)**: Node pinned as the entry below says; `.github/workflows/ci.yml` on `pull_request` and `main` — lint, typecheck, build, then the Docker image built and health-checked; `.github/dependabot.yml` (npm weekly with dev dependencies grouped and `@types/node` held to `.nvmrc`'s major, the workflows' actions, the Docker base image). ESLint stays the linter: it already existed, and Biome is the spec's choice for a new project only. `ci.yml` uses `actions/checkout@v7` and `actions/setup-node@v7`, the versions `release.yml` and the spec's model (`tamalou`) run on; `pages.yml` and `docker-build.yml` keep their older pins until Dependabot raises them.
+- **Tests (E3)**: `npm test` on Node's own runner, in the gate (the entry below); the first suites hold the calendar's day keys and grouping, the filters and stats, the rate-limit cooldown and the sync's resume arithmetic.
+- **The icon set (C11)**: `public/icons/` — three SVG sources and the PNGs `scripts/gen-icons.mjs` draws, the touch icon opaque, the manifest's paths relative, held by `tests/icons.test.ts` (`frontend.md`); the showcase gets the same files (`demo-and-showcase.md`).
+- **The showcase as a public page (C17)**: canonical, link-preview tags on the 1200 × 630 card, a legal notice, no script and no third-party resource — held by `tests/showcase.test.ts` (`demo-and-showcase.md`); the app itself is behind Spotify's OAuth and is not a public page. Left to the owner: a French twin (N4), Umami.
+- **Security headers (C16)**: one list in `lib/security.ts`, applied to every path by `next.config.ts` (which replaced `next.config.mjs`), the CSP report-only until a tour of the Home Lab instance is clean, held by `tests/security.test.ts` (`architecture.md`, "Security headers").
 
 ## The `typescript` / `typescript7` devDependency pair is deliberate (2026-08-20)
 
@@ -27,13 +38,23 @@ Next 16 removed it. ESLint is invoked directly (`npm run lint`) against the flat
 
 `eslint-plugin-react-hooks` v7 (pulled in by `eslint-config-next` 16) added React Compiler-backed rules that flag long-standing patterns here: mount flags, URL-state hydration, and a `Date.now()` read during render. `react-hooks/purity`, `react-hooks/set-state-in-effect` and `react-hooks/refs` are set to `warn` so lint passes while the findings stay visible. The comment in the config calls each one "a genuine cleanup" — the demotion is a deferral, not a dismissal. **How to apply**: do not silence them further, and do not promote them to errors without doing the effect rework, which is its own change.
 
-## Node and version floors (2026-08-20)
+## Node: 24 in `.nvmrc`, the floor at 22, an exact tag in Docker (2026-08-20, rev. 2026-10-19)
 
-`engines.node` is `>=20.9.0` (Next 16's floor); the Docker images and both GitHub workflows run Node 24. **How to apply**: a Node-24-only API will pass CI and break a maintainer running 20.x locally — target the floor, not what CI happens to have.
+`.nvmrc` says `24`, which CI (`ci.yml`, `pages.yml` through `node-version-file`) runs; `engines.node` is `>=22.18.0`: the portfolio's floor is 22 (C14) and 22.18 is the first 22 that strips TypeScript without a flag, which `npm test` relies on — Next 16 itself only needs 20.9, so the floor is a policy, not a framework constraint. Both Dockerfiles pin `node:24.22.0-alpine`: an exact tag and never a moving major, because a floating tag ships a runtime nobody tested (spotify-poller's `node:24` once pulled 24.19.0, which crashed better-sqlite3); Dependabot's `docker` block proposes each new 24.x. **How to apply**: a Node-24-only API will pass CI and break a maintainer on 22 — target the floor, not what CI happens to have; raise the two Dockerfiles together, and `.nvmrc` only with a new major.
 
-## What "verified" means here (2026-08-20)
+## What "verified" means here (2026-08-20, rev. 2026-10-19)
 
-There is no test suite. Verification is `npm run build`, `npm run lint`, `npm run typecheck`, plus looking at the running app (`DEMO_MODE=1 npm run dev` when you have no Spotify credentials). Neither workflow gates on lint or typecheck — the Docker and Pages builds only run `next build` — so a type or lint regression reaches `main` unless you run them yourself.
+Verification is `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, plus looking at the running app (`DEMO_MODE=1 npm run dev` when you have no Spotify credentials): the tests cover the pure logic of `lib/` only, nothing that renders. `.github/workflows/ci.yml` runs those four on every pull request and on `main` and, in a second job, builds the production image and polls its `/api/health`; the Docker and Pages builds still only run `next build`, so a lint, type or test regression is caught by CI's `verify` job, not by them. Run the same commands before committing: a red job is a broken pull request.
+
+## Tests run on Node's own runner, the TypeScript stripped by Node (2026-10-19)
+
+`npm test` is `node --test "tests/**/*.test.ts"`: no framework, no transpiler, no new dependency — the spec's rule for a repo that had none (E3), and `tsx` is not installed here (`winnow` runs its tests through it only because it already had it). Node ≥ 22.18 / 24 strips types natively, hence the `engines` floor above. Three traps, all met on the first run:
+
+- **A test imports its subject with the `.ts` extension** (`import … from "../lib/library.ts"`): Node's ESM loader resolves no extension. `tsconfig.json` has `allowImportingTsExtensions: true` for that, which TypeScript allows only with `noEmit` (set) and which Next's build and `tsgo` both accept; the app's own imports stay extensionless, Turbopack resolves them.
+- **Only erasable syntax is stripped**: an `enum`, a parameter property or a `namespace` in a module under test is a syntax error at run time. `lib/` has none; keep it that way. `import type` is erased, so a pure module may import types from anywhere.
+- **A module is loaded whole**: `lib/sync.ts` is testable although `loadJob` reads `localStorage`, because nothing touches the DOM at import time; `lib/clientCache.ts` would be, for the same reason, but its functions need IndexedDB. A helper worth testing is extracted into `lib/` as a pure function (`resumeOffset`, `appendUnique`, `activeCooldown` came out of `SyncProvider` this way) rather than tested through React.
+
+Clocks: `mock.timers.enable({ apis: ["Date"], now })` from `node:test` holds `Date.now()` still (`tests/rateLimit.test.ts`); a time zone is pinned per file with `process.env.TZ` before any date is built, and the runner's one-process-per-file isolation keeps it there.
 
 ## Sandboxed agent environments (2026-08-20)
 

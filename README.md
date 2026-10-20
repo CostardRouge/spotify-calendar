@@ -87,7 +87,8 @@ lib/                -> config, auth cookies, Spotify client, pure filter helpers
 ```
 
 - **Framework:** Next.js 16 (App Router, Turbopack) + React 19 + TypeScript 7,
-  `output: "standalone"`. Requires Node.js 20.9+ (images and CI run Node 24).
+  `output: "standalone"`. Node 24 (`.nvmrc`, what CI and the Docker images run);
+  `engines` keeps the floor at 22.18.
 - **TypeScript:** `npm run typecheck` runs the TypeScript 7 native compiler.
   TypeScript 7 no longer ships the old JavaScript compiler API, so
   `node_modules/typescript` is the `@typescript/typescript6` compatibility
@@ -96,6 +97,14 @@ lib/                -> config, auth cookies, Spotify client, pure filter helpers
   TypeScript 7 API (typescript-eslint tracks this in issue #10940).
 - **Lint:** `npm run lint` calls ESLint directly via `eslint.config.mjs` —
   `next lint` was removed in Next 16.
+- **Tests:** `npm test` runs Node's own test runner over `tests/*.test.ts` —
+  TypeScript stripped by Node itself, no test framework — on the pure helpers
+  of `lib/`: day keys and grouping, filters and stats, the rate-limit cooldown,
+  the sync's resume arithmetic.
+- **CI:** `.github/workflows/ci.yml` runs lint, typecheck, tests and build on
+  every pull request and on `main`, then builds the Docker image and checks its
+  `/api/health`. Dependabot proposes dependency, action and base-image updates
+  weekly.
 - **Docker:** `Dockerfile.dev` (hot reload) and `Dockerfile` (multi-stage,
   non-root, healthcheck) with matching Compose files.
 - **Data:** the whole saved-albums library is fetched server-side and enriched
@@ -141,9 +150,18 @@ on every push to `main` it builds the app, boots it in demo mode, captures
 real screenshots with Playwright (`scripts/showcase-screenshots.mjs`), and
 deploys the landing page in `showcase/` to GitHub Pages. One-time setup:
 **Settings → Pages → Source: "GitHub Actions"**. Regenerate the fixture
-library with `node scripts/build-demo-library.mjs`.
+library with `node scripts/build-demo-library.mjs`. The page is a public one:
+it carries a canonical address, link-preview tags, the app's icons and a
+legal notice (publisher, host, what it knows about a visitor — nothing: it
+loads no script and no third-party resource, which `npm test` holds it to).
 
 ## Notes
 
 - Login lasts ~1 hour and refreshes automatically via the stored refresh token.
+- `SYNC_DEBUG=1` prints every Spotify call and each token refresh's granted
+  scopes to the server log, for an investigation; it is off by default (see
+  `.env.example`).
+- Every response carries the security headers of `lib/security.ts`; its
+  content security policy is report-only (it lists in the browser console what
+  it would block, and blocks nothing) until a tour of a real instance is clean.
 - `.env` is git-ignored — never commit real secrets.

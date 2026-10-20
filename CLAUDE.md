@@ -4,8 +4,9 @@ Agents read this file at the start of every session. These rules override the ag
 
 ## Context
 
-- **spotify-calendar** — a Next.js 16.2 app (App Router, Turbopack, `output: "standalone"`) on React 19.2 and TypeScript 7, requiring Node.js 20.9+ (Docker images and CI run Node 24). It lays your saved Spotify albums and liked tracks on a calendar, grouped by the day you saved them; OAuth runs server-side and the tokens live in httpOnly cookies. It deploys as a Docker image published to GHCR by `.github/workflows/docker-build.yml` on every push to `main`, pulled by a self-hosted Home Lab stack (`docker-compose.prod.yml`); `.github/workflows/pages.yml` separately builds the demo-mode showcase and deploys it to GitHub Pages. Package manager: **npm** — the lockfile is `package-lock.json`.
-- `npm run dev` (dev server), `npm run build`, `npm run lint` (ESLint flat config), `npm run typecheck` (TypeScript 7 native compiler). There is **no test suite** — verification is build + lint + typecheck, plus a look at the running app. `make up` / `make prod-deploy` drive the Docker stacks (`make help` lists every target).
+- **spotify-calendar** — a Next.js 16.2 app (App Router, Turbopack, `output: "standalone"`) on React 19.2 and TypeScript 7, on Node 24 (`.nvmrc`, what CI and the Docker images run — `node:24.22.0-alpine`, an exact tag Dependabot raises; `engines` keeps the floor at 22.18, the first Node that runs the tests' TypeScript without a flag). It lays your saved Spotify albums and liked tracks on a calendar, grouped by the day you saved them; OAuth runs server-side and the tokens live in httpOnly cookies. It deploys as a Docker image published to GHCR by `.github/workflows/docker-build.yml` on every push to `main`, pulled by a self-hosted Home Lab stack (`docker-compose.prod.yml`); `.github/workflows/pages.yml` separately builds the demo-mode showcase and deploys it to GitHub Pages. Package manager: **npm** — the lockfile is `package-lock.json`.
+- `npm run dev` (dev server), `npm run build`, `npm run lint` (ESLint flat config), `npm run typecheck` (TypeScript 7 native compiler), `npm test` (Node's own runner over `tests/**/*.test.ts`, the TypeScript stripped by Node itself — no test dependency; it covers the pure logic of `lib/`: the day keys and grouping, the filters and stats, the rate-limit cooldown, the sync's resume arithmetic). Anything that renders is still looked at in the running app. **The gate is lint + typecheck + test + build**: `.github/workflows/ci.yml` runs it on every pull request and on `main`, then builds the Docker image and checks its `/api/health`; `.github/dependabot.yml` raises npm packages, the workflows' actions and the Docker base image weekly. `make up` / `make prod-deploy` drive the Docker stacks (`make help` lists every target).
+- **This repository is PUBLIC** (measured 2026-10-19). So rule 3's public-repo restriction applies: a Registry block carries only `Project:`, ticked boxes and one `Log:` line — never a `Last point:` nor an open box. `registry.yml` reads the visibility itself, so nothing here needs changing if the repo goes private.
 - Several agent sessions may run **in parallel** on this repo. Git history must stay readable: **one commit = one task**.
 - **Local sessions: never `git push`** — the developer tests locally and pushes himself. **Cloud / web sessions (ephemeral container): push the working branch and open a pull request**, it is the only way the code gets out. Never push to `main` either way.
 
@@ -22,7 +23,7 @@ As soon as a task requested by the user is finished (feature, fix, refactor, con
    - If one file holds changes from this task AND another, prefer `git add -p <file>` to stage only the relevant hunks. If inextricable, stage the whole file and say so in the commit body ("also contains …").
    - Never stage: `.env` and any secret file, `.idea/`, `.vscode/`, `.next/`, `.cache/`, `site/`, `out/`, `node_modules/`, `.DS_Store` — unless the task is explicitly about them. If one of these turns out to be *tracked*, say so: it must be untracked and gitignored, not carefully avoided at every commit.
    - Check with `git diff --cached --stat` before committing.
-3. **Commit with a readable message** (format below). Always use a HEREDOC to keep title + body:
+3. **Commit with a readable message** (format below). Always use a HEREDOC to keep title + body, and end it with the attribution trailer(s) your harness asks for:
 
    ```bash
    git commit -m "$(cat <<'EOF'
@@ -31,12 +32,12 @@ As soon as a task requested by the user is finished (feature, fix, refactor, con
    Why this change, what it does concretely, non-obvious decisions.
    One line per idea. Mention the files/areas touched if useful.
 
-   Co-Authored-By: Claude <noreply@anthropic.com>
+   Co-Authored-By: …
    EOF
    )"
    ```
 
-4. **Do not push** (local sessions). End the reply with a recap: short hash + commit title + the list of files that were modified but deliberately **left uncommitted**, if any, so the user knows where every change comes from.
+4. **Push only from a cloud session** (see Context). End the reply with a recap: short hash + commit title + the list of files that were modified but deliberately **left uncommitted**, if any, so the user knows where every change comes from.
 5. If a git hook changes or refuses something: read the output, fix, recommit. Never `--no-verify`.
 
 ### Commit message format
@@ -48,7 +49,7 @@ As soon as a task requested by the user is finished (feature, fix, refactor, con
 
 ### When is a task "finished"?
 
-- The requested code is written **and** verified: `npm run build`, `npm run lint` and `npm run typecheck` green — plus, for anything that renders, a look at the running app (`npm run dev`, or `DEMO_MODE=1 npm run dev` when you have no Spotify credentials).
+- The requested code is written **and** verified: `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` green (exactly what `ci.yml` gates) — plus, for anything that renders, a look at the running app (`npm run dev`, or `DEMO_MODE=1 npm run dev` when you have no Spotify credentials).
 - A plain question, an exploration or an explanation produces **no** commit (nothing to commit).
 
 ## Rule 2 — Project memory in `MEMORY.md` + `docs/memory/` (MANDATORY)
@@ -180,12 +181,15 @@ later).
 - **The `typescript` / `typescript7` devDependency pair is deliberate, not a mistake.** `node_modules/typescript` is the `@typescript/typescript6` compatibility package (typescript-eslint and editors still need the old JS compiler API, which TS 7 dropped); `typescript7` is the real TypeScript 7. That is why `npm run typecheck` invokes `./node_modules/typescript7/bin/tsc` by path. Do not "clean up" either alias — see `docs/memory/tooling.md`.
 - **`next lint` no longer exists** (removed in Next 16). Lint is `npm run lint`, i.e. ESLint invoked directly against `eslint.config.mjs`.
 - **Never hand-edit `package-lock.json`, and regenerate it with npm 11+** (`npm install --package-lock-only`). CI runs `npm ci` on Node 24 / npm 11, which validates the *full* optional-dependency set; a lockfile written by npm 10 omits the non-linux binaries and fails the build. See `docs/memory/tooling.md`.
+- **A test imports its subject with its `.ts` extension** (`../lib/library.ts`, allowed by `allowImportingTsExtensions`): Node resolves no extension and strips types from erasable syntax only — no `enum`, no parameter property, no `namespace` in `lib/` — and a module under test must not touch `window`, `document`, `localStorage` or `indexedDB` at import time (inside a function is fine). Logic worth testing is a pure function in `lib/`, as `lib/sync.ts`'s resume helpers became; a component only calls it.
+- **Security headers come from `lib/security.ts` alone** (COMMON-PROJECT-SPEC C16): `next.config.ts` applies that one list to every path and `tests/security.test.ts` holds both. A new origin the browser loads from (a font, an image host, an API) goes into that module and its test, never into the config by hand. The content security policy is report-only until a tour of the Home Lab instance shows a clean console; then the header is renamed in the module and its test, nothing else (`docs/memory/architecture.md`).
 - **`site/` is generated** by the Pages workflow (screenshots + landing page) and is gitignored — edit `showcase/index.html` and `scripts/showcase-screenshots.mjs` instead, never `site/`.
 - **Working without Spotify credentials**: `DEMO_MODE=1` serves the fixture library in `lib/demo-library.json` with no auth, across every route. Use it to run and screenshot the app. Regenerate the fixtures with `node scripts/build-demo-library.mjs`.
 - **Spotify is rate-limited and unforgiving**: every request made during an active 429 ban can prolong it. Do not add a Spotify call to a polling path, and do not remove the pacing `sleep`s or the cooldown pre-flight. See `docs/memory/spotify-api.md`.
 
 ## Related files
 
-- `AGENTS.md`: points to this file for tools that do not read `CLAUDE.md`.
-- `MEMORY.md` + `docs/memory/`: project long-term memory (rule 2).
+- `AGENTS.md`: a symlink to this file, for tools that do not read `CLAUDE.md`.
+- `MEMORY.md` + `docs/memory/`: project long-term memory (rule 2); `.claude/commands/memorize.md` consolidates a conversation into it.
 - `CHANGELOG.md`: what each release brought (rule 4); `.github/release.mjs` + `.github/workflows/release.yml` tag and publish it.
+- `COMMON-PROJECT-SPEC.md` in the private `second-brain` repo: where rules 1 to 4 come from, adopted here on 2026-10-19.

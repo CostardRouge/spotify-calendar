@@ -1,3 +1,5 @@
+import type { Album } from "./types";
+
 export type JobStatus = "idle" | "running" | "paused" | "done" | "error";
 export type Phase = "" | "albums" | "tracks" | "genres" | "done";
 
@@ -80,4 +82,50 @@ export function saveJob(userId: string, job: SyncJob): void {
   } catch {
     // ignore quota/availability
   }
+}
+
+// ---------------------------------------------------------------------------
+// The sync loop's arithmetic, pure so tests/sync.test.ts can hold it still.
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the next page of `kind` starts: after what is already held. The offset
+ * is derived from the items, never from a stored cursor, so an interrupted and
+ * resumed run neither gaps nor duplicates (docs/memory/data-and-sync.md).
+ */
+export function resumeOffset(items: Album[], kind: Album["kind"]): number {
+  let n = 0;
+  for (const it of items) if (it.kind === kind) n++;
+  return n;
+}
+
+/**
+ * The held list plus the incoming items not already in it, by id, once each,
+ * in their order. Returns `held` itself when nothing is new, so a caller can
+ * skip a state update on an overlapping page.
+ */
+export function appendUnique(held: Album[], incoming: Album[]): Album[] {
+  if (!incoming.length) return held;
+  const seen = new Set(held.map((i) => i.id));
+  const fresh: Album[] = [];
+  for (const it of incoming) {
+    if (seen.has(it.id)) continue;
+    seen.add(it.id);
+    fresh.push(it);
+  }
+  return fresh.length ? [...held, ...fresh] : held;
+}
+
+/**
+ * The cooldown a run must wait for, or null when none is active: the later of
+ * the one persisted with the job and the one the server knows, if it is still
+ * ahead of `now`. Firing a Spotify request before it ends only prolongs the ban.
+ */
+export function activeCooldown(
+  persistedUntil: number | null | undefined,
+  serverUntil: number | null | undefined,
+  now: number,
+): number | null {
+  const until = Math.max(persistedUntil ?? 0, serverUntil ?? 0);
+  return until > now ? until : null;
 }

@@ -9,6 +9,23 @@ history's turning points.
 
 ## [Unreleased]
 
+### Added
+
+- The showcase page (costardrouge.github.io/spotify-calendar) carries a legal notice — who publishes it, who hosts
+  it, what it knows about a visitor (nothing) — and shows a proper card when its link is pasted somewhere.
+
+### Fixed
+
+- The icon added to an iPhone's home screen no longer comes back framed in black: it is opaque now. Browsers that
+  prefer a raster favicon to the SVG get one (16 and 32 px).
+
+### Security
+
+- Every response carries security headers (HSTS, no sniffing, no framing, a referrer and a permissions policy) and a
+  content security policy that, for now, only reports in the browser console what it would block.
+- The server no longer prints every Spotify call, nor the scopes granted at each token refresh, to its console by
+  default; `SYNC_DEBUG=1` turns that instrumentation on for an investigation.
+
 ## [1.0.0] - 2026-10-17 — Gavotte
 
 The first numbered release: spotify-calendar as it runs on the Home Lab today.

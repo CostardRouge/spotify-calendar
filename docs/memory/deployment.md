@@ -10,9 +10,13 @@ An optional `DEPLOY_WEBHOOK_URL` / `DEPLOY_WEBHOOK_TOKEN` secret pair triggers a
 
 ## `output: "standalone"` drives the whole image layout (2026-08-20)
 
-`next.config.mjs` sets `output: "standalone"` so `Dockerfile` can copy `.next/standalone`, `.next/static` and `public/` into a bare `node:24-alpine` runner and start it with `node server.js` — no `node_modules` in the final image. The runner also creates an unprivileged `nextjs:nodejs` user and a writable `/app/.cache`. **How to apply**: removing `output: "standalone"` breaks the production Dockerfile; anything the server reads at runtime must be under `public/`, bundled, or in the mounted `/app/.cache`.
+`next.config.ts` sets `output: "standalone"` so `Dockerfile` can copy `.next/standalone`, `.next/static` and `public/` into a bare Node Alpine runner (the exact tag the Dockerfile pins, see below) and start it with `node server.js` — no `node_modules` in the final image. The runner also creates an unprivileged `nextjs:nodejs` user and a writable `/app/.cache`. **How to apply**: removing `output: "standalone"` breaks the production Dockerfile; anything the server reads at runtime must be under `public/`, bundled, or in the mounted `/app/.cache`.
 
 `Dockerfile.dev` is the hot-reload variant used by `docker-compose.yml`, which bind-mounts the source and sets `WATCHPACK_POLLING=true` (file watching is unreliable inside Docker without it) while keeping the container's own `node_modules` and `.next` as anonymous volumes.
+
+## The base image is an exact tag, and CI boots the image before a merge (2026-10-19)
+
+Both Dockerfiles pin `node:24.22.0-alpine` (C14; the reasoning in `tooling.md`, "Node"), and `.github/dependabot.yml`'s `docker` block proposes each new 24.x on Mondays. `ci.yml`'s `docker` job builds the production image and polls `/api/health` on every pull request, so a Dockerfile that no longer builds or an image that no longer boots is found before the merge — `docker-build.yml` still publishes only from `main`, and the redeploy step stays optional. **How to apply**: a change to the Dockerfile is verified by that job rather than by hand; keep `Dockerfile.dev` on the same tag, and never put a credential in the image — `/api/health` is the one route the job calls precisely because it needs none.
 
 ## Persistence is one named volume (2026-08-20)
 

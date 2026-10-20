@@ -10,8 +10,11 @@ import {
 } from "react";
 import type { Album } from "@/lib/types";
 import {
+  activeCooldown,
+  appendUnique as appendUniqueItems,
   initialJob,
   loadJob,
+  resumeOffset,
   saveJob,
   type JobLog,
   type SyncJob,
@@ -261,10 +264,8 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
 
   const appendUnique = useCallback(
     (incoming: Album[]) => {
-      if (!incoming.length) return;
-      const seen = new Set(itemsRef.current.map((i) => i.id));
-      const fresh = incoming.filter((i) => !seen.has(i.id));
-      if (fresh.length) setItems([...itemsRef.current, ...fresh]);
+      const next = appendUniqueItems(itemsRef.current, incoming);
+      if (next !== itemsRef.current) setItems(next);
     },
     [setItems],
   );
@@ -304,10 +305,10 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
 
     while (true) {
       if (stopRequested()) return;
-      const offset = itemsRef.current.filter((i) => i.kind === kind).length;
+      const offset = resumeOffset(itemsRef.current, kind);
       const data = await apiJson(`${endpoint}?offset=${offset}&limit=${PAGE}`, 30000);
       appendUnique(data.items ?? []);
-      const loaded = itemsRef.current.filter((i) => i.kind === kind).length;
+      const loaded = resumeOffset(itemsRef.current, kind);
       patchJob({ [progressKey]: { loaded, total: data.total ?? loaded } } as any);
 
       pages++;
@@ -481,10 +482,12 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
     // Pre-flight: never fire a Spotify request while a cooldown is active —
     // that only prolongs the ban. Respect both the persisted cooldown and the
     // server's shared record (covers a fresh browser with empty localStorage).
-    const persisted = jobRef.current.rateLimitedUntil ?? 0;
-    const server = (await serverCooldownUntil()) ?? 0;
-    const until = Math.max(persisted, server);
-    if (until && Date.now() < until) {
+    const until = activeCooldown(
+      jobRef.current.rateLimitedUntil,
+      await serverCooldownUntil(),
+      Date.now(),
+    );
+    if (until) {
       patchJob({ status: "error", rateLimitedUntil: until, error: rateLimitMsg(until) });
       log("warn", rateLimitMsg(until));
       return;

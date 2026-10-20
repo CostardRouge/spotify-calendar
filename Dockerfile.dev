@@ -1,7 +1,7 @@
 # Local development image: hot-reload via `next dev`.
 # Source is bind-mounted by docker-compose, so we only need dependencies here.
 # Same exact base tag as Dockerfile (see the note there); raise both together.
-FROM node:24.22.0-alpine
+FROM node:26.12.0-alpine
 
 WORKDIR /app
 

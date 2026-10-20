@@ -9,6 +9,11 @@ history's turning points.
 
 ## [Unreleased]
 
+### Security
+
+- The server no longer prints every Spotify call, nor the scopes granted at each token refresh, to its console by
+  default; `SYNC_DEBUG=1` turns that instrumentation on for an investigation.
+
 ## [1.0.0] - 2026-10-17 — Gavotte
 
 The first numbered release: spotify-calendar as it runs on the Home Lab today.

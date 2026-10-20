@@ -155,4 +155,7 @@ library with `node scripts/build-demo-library.mjs`.
 ## Notes
 
 - Login lasts ~1 hour and refreshes automatically via the stored refresh token.
+- `SYNC_DEBUG=1` prints every Spotify call and each token refresh's granted
+  scopes to the server log, for an investigation; it is off by default (see
+  `.env.example`).
 - `.env` is git-ignored — never commit real secrets.

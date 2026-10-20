@@ -18,9 +18,11 @@ Every API route sets `export const dynamic = "force-dynamic"` and a `maxDuration
 
 `app/layout.tsx` mounts `SyncProvider` (library data + sync job state) and `PlaybackProvider` (player state) around everything. Components read them by hook rather than by prop-drilling. `SyncProvider` hydrates **asynchronously** on purpose — it reads IndexedDB, and doing that synchronously blocked the initial render (`afeca9a`). **How to apply**: never assume the library is present on first paint; components must render an empty/loading state without crashing.
 
-## Scope drift is a first-class failure mode (2026-08-20)
+## Scope drift is a first-class failure mode (2026-08-20, rev. 2026-10-19)
 
 Playback scopes were added after the first users had already authorised the app, so their refresh tokens were minted without them. The refresh response echoes the scopes the *refresh token* carries, which is why `resolveAccessToken()` returns `scope` and `lib/playerErrors.ts` exposes `scopeGuard()`: a player route whose required scope is known-missing short-circuits with `reauth_required` instead of calling Spotify, getting a 401 and triggering an endless refresh loop. An **empty** granted-scope string means "unknown" (session predates scope tracking) and deliberately never blocks. **How to apply**: any new endpoint needing a new scope must add it to `config.scopes` *and* guard with `scopeGuard()`, or existing sessions will 401-loop.
+
+The `[SYNC-DEBUG]` instrumentation that investigation left in `lib/spotify.ts` (every `apiGet` result with its timing, each token refresh with its granted scope string) prints only with `SYNC_DEBUG=1` (`lib/debug.ts`, since 2026-10-19): a production console carries neither every call nor the scopes by default — a log line per Spotify request is noise, and the scope string is session detail nobody asked to be logged. **How to apply**: new instrumentation goes through `debug()`, never a bare `console.log`; to look at the scopes on the Home Lab, set the variable in its `.env`, restart, read, unset.
 
 ## Errors are mapped once, centrally (2026-08-20)
 

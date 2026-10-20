@@ -1,4 +1,5 @@
 import { config } from "./config";
+import { debug } from "./debug";
 import type { Album, SpotifyTokens } from "./types";
 
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -39,7 +40,7 @@ export async function refreshAccessToken(
     grant_type: "refresh_token",
     refresh_token: refreshToken,
   });
-  const __t0 = Date.now(); // [SYNC-DEBUG] temporary instrumentation
+  const __t0 = Date.now(); // timing for the SYNC_DEBUG lines (lib/debug.ts)
   const res = await fetch(TOKEN_URL, {
     method: "POST",
     headers: {
@@ -50,15 +51,15 @@ export async function refreshAccessToken(
     cache: "no-store",
   });
   if (!res.ok) {
-    console.log(`[SYNC-DEBUG] token refresh -> ${res.status} in ${Date.now() - __t0}ms`);
+    debug(`token refresh -> ${res.status} in ${Date.now() - __t0}ms`);
     throw new Error(`Token refresh failed (${res.status}): ${await res.text()}`);
   }
   const tokens: SpotifyTokens = await res.json();
-  // Log the granted scope: a refresh echoes the scopes the *refresh token* was
-  // minted with. If playback scopes are absent here, that's the scope-drift
-  // cause of the /me/player 401s.
-  console.log(
-    `[SYNC-DEBUG] token refresh -> ${res.status} in ${Date.now() - __t0}ms scope="${tokens.scope ?? ""}"`,
+  // Log the granted scope (SYNC_DEBUG=1 only): a refresh echoes the scopes the
+  // *refresh token* was minted with. If playback scopes are absent here, that's
+  // the scope-drift cause of the /me/player 401s.
+  debug(
+    `token refresh -> ${res.status} in ${Date.now() - __t0}ms scope="${tokens.scope ?? ""}"`,
   );
   return tokens;
 }
@@ -79,21 +80,26 @@ async function apiGet(
   rateWaits = 0,
 ): Promise<any> {
   let res: Response;
-  const __t0 = Date.now(); // [SYNC-DEBUG] temporary instrumentation
+  const __t0 = Date.now(); // timing for the SYNC_DEBUG lines (lib/debug.ts)
   try {
     res = await fetch(API + path, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
   } catch (e) {
-    console.log(`[SYNC-DEBUG] GET ${path} attempt=${attempt} NETWORK-ERROR after ${Date.now() - __t0}ms:`, (e as Error)?.message);
+    debug(
+      `GET ${path} attempt=${attempt} NETWORK-ERROR after ${Date.now() - __t0}ms:`,
+      (e as Error)?.message,
+    );
     if (attempt < MAX_RETRIES) {
       await sleep(500 * 2 ** attempt);
       return apiGet(path, token, attempt + 1, rateWaits);
     }
     throw e;
   }
-  console.log(`[SYNC-DEBUG] GET ${path} -> ${res.status} in ${Date.now() - __t0}ms (attempt=${attempt}, rateWaits=${rateWaits}, retry-after=${res.headers.get("Retry-After") ?? "-"})`);
+  debug(
+    `GET ${path} -> ${res.status} in ${Date.now() - __t0}ms (attempt=${attempt}, rateWaits=${rateWaits}, retry-after=${res.headers.get("Retry-After") ?? "-"})`,
+  );
 
   if (res.status === 401) {
     const err = new Error("unauthorized");

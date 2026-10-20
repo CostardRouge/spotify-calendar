@@ -11,6 +11,7 @@ The spec lives in the private `second-brain` repo; this repo adopted it on 2026-
 - **Tests (E3)**: `npm test` on Node's own runner, in the gate (the entry below); the first suites hold the calendar's day keys and grouping, the filters and stats, the rate-limit cooldown and the sync's resume arithmetic.
 - **The icon set (C11)**: `public/icons/` — three SVG sources and the PNGs `scripts/gen-icons.mjs` draws, the touch icon opaque, the manifest's paths relative, held by `tests/icons.test.ts` (`frontend.md`); the showcase gets the same files (`demo-and-showcase.md`).
 - **The showcase as a public page (C17)**: canonical, link-preview tags on the 1200 × 630 card, a legal notice, no script and no third-party resource — held by `tests/showcase.test.ts` (`demo-and-showcase.md`); the app itself is behind Spotify's OAuth and is not a public page. Left to the owner: a French twin (N4), Umami.
+- **Security headers (C16)**: one list in `lib/security.ts`, applied to every path by `next.config.ts` (which replaced `next.config.mjs`), the CSP report-only until a tour of the Home Lab instance is clean, held by `tests/security.test.ts` (`architecture.md`, "Security headers").
 
 ## The `typescript` / `typescript7` devDependency pair is deliberate (2026-08-20)
 

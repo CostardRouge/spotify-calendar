@@ -10,7 +10,7 @@ An optional `DEPLOY_WEBHOOK_URL` / `DEPLOY_WEBHOOK_TOKEN` secret pair triggers a
 
 ## `output: "standalone"` drives the whole image layout (2026-08-20)
 
-`next.config.mjs` sets `output: "standalone"` so `Dockerfile` can copy `.next/standalone`, `.next/static` and `public/` into a bare Node Alpine runner (the exact tag the Dockerfile pins, see below) and start it with `node server.js` — no `node_modules` in the final image. The runner also creates an unprivileged `nextjs:nodejs` user and a writable `/app/.cache`. **How to apply**: removing `output: "standalone"` breaks the production Dockerfile; anything the server reads at runtime must be under `public/`, bundled, or in the mounted `/app/.cache`.
+`next.config.ts` sets `output: "standalone"` so `Dockerfile` can copy `.next/standalone`, `.next/static` and `public/` into a bare Node Alpine runner (the exact tag the Dockerfile pins, see below) and start it with `node server.js` — no `node_modules` in the final image. The runner also creates an unprivileged `nextjs:nodejs` user and a writable `/app/.cache`. **How to apply**: removing `output: "standalone"` breaks the production Dockerfile; anything the server reads at runtime must be under `public/`, bundled, or in the mounted `/app/.cache`.
 
 `Dockerfile.dev` is the hot-reload variant used by `docker-compose.yml`, which bind-mounts the source and sets `WATCHPACK_POLLING=true` (file watching is unreliable inside Docker without it) while keeping the container's own `node_modules` and `.next` as anonymous volumes.
 

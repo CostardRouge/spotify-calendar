@@ -161,4 +161,7 @@ loads no script and no third-party resource, which `npm test` holds it to).
 - `SYNC_DEBUG=1` prints every Spotify call and each token refresh's granted
   scopes to the server log, for an investigation; it is off by default (see
   `.env.example`).
+- Every response carries the security headers of `lib/security.ts`; its
+  content security policy is report-only (it lists in the browser console what
+  it would block, and blocks nothing) until a tour of a real instance is clean.
 - `.env` is git-ignored — never commit real secrets.

@@ -21,6 +21,8 @@ history's turning points.
 
 ### Security
 
+- Every response carries security headers (HSTS, no sniffing, no framing, a referrer and a permissions policy) and a
+  content security policy that, for now, only reports in the browser console what it would block.
 - The server no longer prints every Spotify call, nor the scopes granted at each token refresh, to its console by
   default; `SYNC_DEBUG=1` turns that instrumentation on for an investigation.
 

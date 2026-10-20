@@ -30,14 +30,17 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "spotify-calendar" }],
   manifest: "/manifest.webmanifest",
+  // The icon set (COMMON-PROJECT-SPEC, C11): public/icons, drawn by
+  // scripts/gen-icons.mjs. iOS reads the touch icon alone; the manifest
+  // carries the 192/512 and maskable pairs for Android.
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
-      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icons/favicon-16.png", type: "image/png", sizes: "16x16" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
   appleWebApp: {
     capable: true,

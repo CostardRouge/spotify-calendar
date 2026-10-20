@@ -14,7 +14,7 @@ Read before touching `DEMO_MODE`, `lib/demo.ts`, `lib/demo-library.json`, `showc
 
 ## Screenshots are captured against a running app (2026-08-20)
 
-`.github/workflows/pages.yml` on every push to `main`: `npm ci` → install Playwright chromium → `npm run build` → start with `DEMO_MODE=1` → poll `/api/health` until it answers → `node scripts/showcase-screenshots.mjs site/screenshots` → copy `showcase/index.html`, `public/favicon.svg` and `public/og-image.png` into `site/` → deploy.
+`.github/workflows/pages.yml` on every push to `main`: `npm ci` → install Playwright chromium → `npm run build` → start with `DEMO_MODE=1` → poll `/api/health` until it answers → `node scripts/showcase-screenshots.mjs site/screenshots` → copy `showcase/index.html`, `public/og-image.png` and the whole `public/icons/` (the app's icon set, which the showcase's head links to relatively — `frontend.md`) into `site/` → deploy.
 
 Consequences worth knowing:
 

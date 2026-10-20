@@ -9,6 +9,11 @@ history's turning points.
 
 ## [Unreleased]
 
+### Fixed
+
+- The icon added to an iPhone's home screen no longer comes back framed in black: it is opaque now. Browsers that
+  prefer a raster favicon to the SVG get one (16 and 32 px).
+
 ### Security
 
 - The server no longer prints every Spotify call, nor the scopes granted at each token refresh, to its console by

@@ -16,7 +16,7 @@ An optional `DEPLOY_WEBHOOK_URL` / `DEPLOY_WEBHOOK_TOKEN` secret pair triggers a
 
 ## The base image is an exact tag, and CI boots the image before a merge (2026-10-19)
 
-Both Dockerfiles pin `node:24.22.0-alpine` (C14; the reasoning in `tooling.md`, "Node"), and `.github/dependabot.yml`'s `docker` block proposes each new 24.x on Mondays. `ci.yml`'s `docker` job builds the production image and polls `/api/health` on every pull request, so a Dockerfile that no longer builds or an image that no longer boots is found before the merge — `docker-build.yml` still publishes only from `main`, and the redeploy step stays optional. **How to apply**: a change to the Dockerfile is verified by that job rather than by hand; keep `Dockerfile.dev` on the same tag, and never put a credential in the image — `/api/health` is the one route the job calls precisely because it needs none.
+Both Dockerfiles pin `node:24.22.0-alpine` (C14; the reasoning in `tooling.md`, "Node"), and `.github/dependabot.yml`'s `docker` block proposes each new 24.x monthly (its major held to `.nvmrc`, C20). `ci.yml`'s `docker` job builds the production image and polls `/api/health` on every pull request, so a Dockerfile that no longer builds or an image that no longer boots is found before the merge — `docker-build.yml` still publishes only from `main`, and the redeploy step stays optional. **How to apply**: a change to the Dockerfile is verified by that job rather than by hand; keep `Dockerfile.dev` on the same tag, and never put a credential in the image — `/api/health` is the one route the job calls precisely because it needs none.
 
 ## Persistence is one named volume (2026-08-20)
 

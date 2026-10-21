@@ -1,33 +1,61 @@
+# Dependabot, the portfolio's shape (COMMON-PROJECT-SPEC.md, C20).
+# Trimmed to what this repository has: one package.json at the root, the two
+# Dockerfiles at the root (node base image), the workflows. No compose file
+# pins a third-party image (docker-compose.prod.yml pulls this repo's own).
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
+      interval: monthly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    open-pull-requests-limit: 3
+    groups:
+      # Families that only work in step: a major moves the whole family.
+      # Listed first, since a dependency goes to the first group it matches.
+      react:
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+        update-types: [major]
+      next:
+        patterns: ['next', 'eslint-config-next', '@next/*']
+        update-types: [major]
+      eslint:
+        patterns: ['eslint', '@eslint/*', 'typescript-eslint', '@typescript-eslint/*', 'eslint-plugin-*', 'eslint-config-*']
+        update-types: [major]
+      # Every minor and patch, production and development together:
+      # one pull request a month.
+      minor-and-patch:
+        update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        patterns: ['*']
     ignore:
-      # Keep Node type definitions in step with the Node.js version in .nvmrc.
+      # Node's type definitions follow .nvmrc's major (C14).
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
-    groups:
-      dev-dependencies:
-        dependency-type: development
-        update-types: [minor, patch]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ['*']
 
   # The base image of Dockerfile and Dockerfile.dev is an exact tag
-  # (node:24.x.y-alpine): this is what raises it.
+  # (node:24.x.y-alpine): this is what raises it within the major.
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
+    cooldown:
+      default-days: 7
+    ignore:
+      # The base image follows .nvmrc's major (C14): a new Node major is
+      # raised by hand, with .nvmrc, CI and @types/node in the same PR.
+      - dependency-name: 'node'
+        update-types: ['version-update:semver-major']

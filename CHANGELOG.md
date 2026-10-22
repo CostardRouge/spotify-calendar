@@ -9,6 +9,8 @@ history's turning points.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-22 — Habanera
+
 ### Added
 
 - The showcase page (costardrouge.github.io/spotify-calendar) carries a legal notice — who publishes it, who hosts

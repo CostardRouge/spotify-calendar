@@ -153,7 +153,9 @@ deploys the landing page in `showcase/` to GitHub Pages. One-time setup:
 library with `node scripts/build-demo-library.mjs`. The page is a public one:
 it carries a canonical address, link-preview tags, the app's icons and a
 legal notice (publisher, host, what it knows about a visitor — nothing: it
-loads no script and no third-party resource, which `npm test` holds it to).
+loads no script and no third-party resource, which `npm test` holds it to) —
+and an `llms.txt` at its root (`showcase/llms.txt`), a summary for language
+models that the same tests hold to the page's links.
 
 ## Notes
 

@@ -13,6 +13,9 @@ history's turning points.
 
 - The showcase page (costardrouge.github.io/spotify-calendar) carries a legal notice — who publishes it, who hosts
   it, what it knows about a visitor (nothing) — and shows a proper card when its link is pasted somewhere.
+- The showcase publishes an `llms.txt` at its root: a short summary of what spotify-calendar is and how it is
+  self-hosted, with links to the showcase, its legal notice and the repository, for language models and the tools
+  built on them.
 
 ### Fixed
 

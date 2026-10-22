@@ -44,3 +44,36 @@ describe("the showcase page", () => {
     assert.match(html, /<a href="#legal">Legal notice<\/a>/);
   });
 });
+
+// llms.txt (C17, J2) is the showcase's summary for language models, served at
+// its root by pages.yml. It is hand-written, so this suite holds it to the
+// page: every address it names is the showcase, an anchor the page carries,
+// or a GitHub address the page itself links to.
+describe("the showcase's llms.txt", () => {
+  const llms = readFileSync(join(process.cwd(), "showcase", "llms.txt"), "utf8");
+  const workflow = readFileSync(join(process.cwd(), ".github", "workflows", "pages.yml"), "utf8");
+
+  it("follows the llmstxt.org shape: one H1, a summary, sections of links", () => {
+    assert.match(llms, /^# spotify-calendar\n\n> \S/);
+    assert.equal((llms.match(/^# /gm) ?? []).length, 1);
+    assert.ok((llms.match(/^## /gm) ?? []).length >= 2);
+  });
+
+  it("names only addresses the showcase serves or links to", () => {
+    const urls = [...llms.matchAll(/\]\((https:[^)]+)\)/g)].map((m) => m[1] as string);
+    assert.ok(urls.includes(SITE), "links the showcase");
+    assert.ok(urls.includes(`${SITE}#legal`), "links the legal notice");
+    for (const url of urls) {
+      if (url.startsWith(SITE)) {
+        const anchor = url.slice(SITE.length);
+        if (anchor) assert.match(html, new RegExp(`id="${anchor.slice(1)}"`), url);
+      } else {
+        assert.ok(html.includes(`href="${url}"`), `the page links ${url}`);
+      }
+    }
+  });
+
+  it("is copied to the showcase's root by the Pages workflow", () => {
+    assert.match(workflow, /cp showcase\/llms\.txt site\//);
+  });
+});

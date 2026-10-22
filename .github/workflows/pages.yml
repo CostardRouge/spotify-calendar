@@ -58,9 +58,11 @@ jobs:
 
       # The page's icons are the app's own set (public/icons, C11), copied
       # whole so the showcase's head links resolve under /spotify-calendar/.
+      # llms.txt (C17) is served at the showcase's root, linked from nothing.
       - name: Assemble site
         run: |
           cp showcase/index.html site/
+          cp showcase/llms.txt site/
           cp public/og-image.png site/
           cp -r public/icons site/icons
 

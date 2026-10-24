@@ -47,7 +47,7 @@ updates:
         patterns: ['*']
 
   # The base image of Dockerfile and Dockerfile.dev is an exact tag
-  # (node:24.x.y-alpine): this is what raises it within the major.
+  # (node:26.x.y-alpine): this is what raises it within the major.
   - package-ecosystem: docker
     directory: /
     schedule:

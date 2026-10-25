@@ -152,10 +152,20 @@ deploys the landing page in `showcase/` to GitHub Pages. One-time setup:
 **Settings → Pages → Source: "GitHub Actions"**. Regenerate the fixture
 library with `node scripts/build-demo-library.mjs`. The page is a public one:
 it carries a canonical address, link-preview tags, the app's icons and a
-legal notice (publisher, host, what it knows about a visitor — nothing: it
-loads no script and no third-party resource, which `npm test` holds it to) —
-and an `llms.txt` at its root (`showcase/llms.txt`), a summary for language
+legal notice (publisher, host, what it knows about a visitor, which `npm test`
+holds to the page's code) — and an `llms.txt` at its root (`showcase/llms.txt`), a summary for language
 models that the same tests hold to the page's links.
+
+**The showcase is measured; the app is not.** The page counts its visits with
+the owner's self-hosted [Umami](https://umami.is) at
+`insight.steevepommier.com`: no cookie, no personal data, the IP not stored,
+only on `costardrouge.github.io`, and no custom event. One inline script in
+`showcase/index.html` loads the tracker, and loads nothing for a visitor who
+sends Do Not Track or Global Privacy Control or who switched counting off on
+the legal notice (Umami's own `umami.disabled` key). The site's id is the
+`WEBSITE_ID` constant in that script — its one home, public by design; set it
+to `""` and the page loads nothing at all. The app behind Spotify's OAuth
+counts nothing.
 
 ## Notes
 

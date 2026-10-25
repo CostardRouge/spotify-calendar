@@ -189,6 +189,11 @@
   .legal h2 { font-size: 22px; color: var(--text); }
   .legal h3 { color: var(--text); font-size: 15px; font-weight: 600; margin: 22px 0 6px; }
   .legal p { margin: 0 0 8px; max-width: 72ch; }
+  .legal code { font-family: var(--mono); font-size: 12.5px; background: var(--accent-wash); border-radius: 6px; padding: 1px 6px; }
+  .legal .switch { border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 12px 16px; margin: 14px 0; max-width: 72ch; }
+  .legal .switch p { margin: 0 0 8px; color: var(--text); }
+  .legal .switch button { cursor: pointer; font-family: inherit; }
+  .legal .switch button[hidden] { display: none; }
 
   /* --- footer --- */
   footer {
@@ -336,9 +341,18 @@
   <p>This page is published by <b>Steeve Pommier</b>, a private individual, on a non-commercial basis: it is free, shows no ads and sells nothing. As a non-professional publisher, the identification details required by French law (Loi pour la confiance dans l’économie numérique, art. 6-III) are kept with the host named below. Contact: through <a href="https://github.com/CostardRouge/spotify-calendar">the repository on GitHub</a>.</p>
   <h3>Hosting</h3>
   <p><b>costardrouge.github.io/spotify-calendar</b> is served by GitHub Pages: GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, United States, <a href="https://github.com">github.com</a>. Like any host, GitHub processes your IP address to deliver the page; see <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub’s privacy statement</a>.</p>
-  <h3>What this page knows about you</h3>
-  <p>Nothing. It loads no tracker, no analytics script and no third-party resource, sets no cookie and stores nothing in your browser; nobody counts your visit. The screenshots show the application over a demo library of real releases with invented save dates, generated in its build pipeline — no real Spotify account and no real library were involved.</p>
-  <p>The application itself is self-hosted by whoever installs it, on their own machine, where their Spotify library and tokens stay: this page does not run it and holds none of it.</p>
+  <h3>Audience measurement</h3>
+  <p>Visits to this page are counted with <a href="https://umami.is">Umami</a>, self-hosted by the publisher at <code>insight.steevepommier.com</code>: the data is gathered there and nowhere else, no third party receives it, and none of it is used for advertising.</p>
+  <p><b>What is sent</b>, for each view of the page: its address (the path alone, without query string or fragment), its title and the site you came from. From the request, the server works out your browser, your operating system, the type of device and your country, derived from your IP address. No event is sent: nothing you click is reported.</p>
+  <p><b>What never is</b>: your IP address is not stored, no personal data is collected and nothing can follow you from one site to another. No cookie is set, so there is no consent banner.</p>
+  <p><b>How to decline</b>: when your browser sends <i>Do Not Track</i> or <i>Global Privacy Control</i>, or when you switch counting off below, the page does not even load the counter and nothing is sent. The switch keeps its choice in this browser’s local storage, under the key <code>umami.disabled</code>. Visits are only counted on <code>costardrouge.github.io</code>, never on a local copy.</p>
+  <div class="switch" id="audience-switch">
+    <p id="audience-state">Without JavaScript, this page cannot tell whether your visits are counted; the counter does not run without it either.</p>
+    <button type="button" class="btn" id="audience-toggle" hidden></button>
+  </div>
+  <h3>What else this page keeps</h3>
+  <p>Nothing else: apart from that switch, it stores nothing in your browser and loads no other script or third-party resource. The screenshots show the application over a demo library of real releases with invented save dates, generated in its build pipeline — no real Spotify account and no real library were involved.</p>
+  <p>The application itself is self-hosted by whoever installs it, on their own machine, where their Spotify library and tokens stay: this page does not run it, holds none of it, and the application counts nothing.</p>
   <h3>Licence</h3>
   <p>spotify-calendar is free software: its <a href="https://github.com/CostardRouge/spotify-calendar">source code</a> is published under the <a href="https://github.com/CostardRouge/spotify-calendar/blob/main/LICENSE">MIT licence</a>. Spotify is a trademark of Spotify AB; this project is not affiliated with it.</p>
 </section>
@@ -351,5 +365,68 @@
   </div>
 </footer>
 
+<!--
+  Audience measurement (docs/memory/demo-and-showcase.md). WEBSITE_ID is the
+  showcase's site in the owner's self-hosted Umami — its one home, public by
+  design; empty, nothing is loaded at all. A visitor who declines (Do Not
+  Track, Global Privacy Control, Umami's own "umami.disabled" key) never loads
+  the tracker. Automatic tracking only: one static page, no custom event.
+  The same script runs the switch in the legal notice. tests/showcase.test.ts
+  holds this block and the notice to each other.
+-->
+<script>
+  (() => {
+    const WEBSITE_ID = "3607d2c6-a9b8-4146-9aeb-bb03d6a0671b";
+    const SRC = "https://insight.steevepommier.com/insight";
+    const DOMAINS = "costardrouge.github.io";
+    const KEY = "umami.disabled";
+    const storage = (() => { try { return window.localStorage; } catch { return null; } })();
+    const optedOut = () => { try { return Boolean(storage && storage.getItem(KEY)); } catch { return false; } };
+    const dnt = [window.doNotTrack, navigator.doNotTrack, navigator.msDoNotTrack].some((v) => v === 1 || v === "1" || v === "yes");
+    const gpc = navigator.globalPrivacyControl === true;
+
+    if (WEBSITE_ID && !dnt && !gpc && !optedOut()) {
+      const tag = document.createElement("script");
+      tag.defer = true;
+      tag.src = SRC;
+      tag.setAttribute("data-umami", "audience");
+      tag.setAttribute("data-website-id", WEBSITE_ID);
+      tag.setAttribute("data-domains", DOMAINS);
+      tag.setAttribute("data-do-not-track", "true");
+      tag.setAttribute("data-exclude-search", "true");
+      tag.setAttribute("data-exclude-hash", "true");
+      document.head.appendChild(tag);
+    }
+
+    const state = document.getElementById("audience-state");
+    const toggle = document.getElementById("audience-toggle");
+    const render = () => {
+      toggle.hidden = true;
+      if (!WEBSITE_ID || !DOMAINS.split(",").includes(location.hostname)) {
+        state.textContent = "This copy of the page does not count visits.";
+      } else if (dnt || gpc) {
+        state.textContent = "Your browser asks not to be tracked (Do Not Track or Global Privacy Control): the counter is not loaded and your visits are not counted.";
+      } else if (!storage) {
+        state.textContent = "Your visits are counted, anonymously. This browser keeps no site data, so the switch cannot be kept: send Do Not Track or Global Privacy Control to stop counting.";
+      } else if (optedOut()) {
+        state.textContent = "Your visits are not counted in this browser.";
+        toggle.textContent = "Count my visits again";
+        toggle.hidden = false;
+      } else {
+        state.textContent = "Your visits are counted, anonymously, in this browser.";
+        toggle.textContent = "Stop counting my visits";
+        toggle.hidden = false;
+      }
+    };
+    toggle.addEventListener("click", () => {
+      try {
+        if (optedOut()) storage.removeItem(KEY);
+        else storage.setItem(KEY, "1");
+      } catch {}
+      render();
+    });
+    render();
+  })();
+</script>
 </body>
 </html>

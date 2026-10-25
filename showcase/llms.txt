@@ -7,7 +7,7 @@ Each day of the calendar shows the covers saved that day; the library can be rea
 ## Showcase
 
 - [spotify-calendar showcase](https://costardrouge.github.io/spotify-calendar/): the landing page, with screenshots of the real interface taken over a demo library of real releases with invented save dates
-- [Legal notice](https://costardrouge.github.io/spotify-calendar/#legal): who publishes the showcase, who hosts it, and what it knows about a visitor (nothing: no tracker, no script, no cookie)
+- [Legal notice](https://costardrouge.github.io/spotify-calendar/#legal): who publishes the showcase, who hosts it, and what it knows about a visitor (visits counted anonymously with a self-hosted Umami at insight.steevepommier.com, no cookie, declinable through Do Not Track, Global Privacy Control or a switch on the notice)
 
 ## Source
 

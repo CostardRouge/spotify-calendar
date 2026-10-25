@@ -9,6 +9,12 @@ history's turning points.
 
 ## [Unreleased]
 
+### Added
+
+- The showcase page now counts its visits anonymously, with the author's self-hosted Umami: no cookie, no personal
+  data. Its legal notice says what is counted, and a visitor can decline — Do Not Track, Global Privacy Control, or
+  the switch on the notice. The app itself counts nothing.
+
 ## [1.1.0] - 2026-10-22 — Habanera
 
 ### Added

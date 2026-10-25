@@ -4,15 +4,27 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // The showcase on GitHub Pages is a public page (COMMON-PROJECT-SPEC, C17):
-// findable, with a legal notice whose facts the page must keep true. The
-// notice says the page loads no script and no third-party resource — this
-// suite is what holds the HTML to that sentence.
+// findable, with a legal notice whose facts the page must keep true. The page
+// loads one inline script — the Umami loader and the notice's switch — and
+// nothing else; this suite holds the HTML to that, and the notice to the code.
 const SITE = "https://costardrouge.github.io/spotify-calendar/";
 const html = readFileSync(join(process.cwd(), "showcase", "index.html"), "utf8");
+const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)];
+const loader = scripts[0]?.[2] ?? "";
+const constant = (name: string) => loader.match(new RegExp(`const ${name} = "([^"]*)"`))?.[1];
+// The notice's visible text: no script, no style, no comment, no tag.
+const text = html
+  .replace(/<script[\s\S]*?<\/script>/g, "")
+  .replace(/<style[\s\S]*?<\/style>/g, "")
+  .replace(/<!--[\s\S]*?-->/g, "")
+  .replace(/<[^>]+>/g, " ")
+  .replace(/\s+/g, " ");
 
 describe("the showcase page", () => {
-  it("loads no script and no third-party resource, as its legal notice says", () => {
-    assert.equal((html.match(/<script/g) ?? []).length, 0);
+  it("loads exactly one inline script and no other third-party resource", () => {
+    assert.equal(scripts.length, 1, "one script");
+    assert.equal(scripts[0]?.[1], "", "inline, no src or attribute");
+    assert.equal((html.match(/<script/g) ?? []).length, 1);
     // A resource is a src= or a stylesheet/icon href=; links to GitHub are fine.
     assert.equal((html.match(/\bsrc="https?:/g) ?? []).length, 0, "no remote src");
     for (const link of html.match(/<link[^>]*>/g) ?? []) {
@@ -20,6 +32,44 @@ describe("the showcase page", () => {
       assert.doesNotMatch(link, /href="https?:/, link);
     }
     assert.doesNotMatch(html, /@import|fonts\.googleapis|fonts\.gstatic/);
+    // The script's only remote address is the tracker's.
+    const urls = loader.match(/https?:\/\/[^"'\s]+/g) ?? [];
+    assert.deepEqual(urls, ["https://insight.steevepommier.com/insight"]);
+  });
+
+  it("loads the self-hosted Umami tracker with the showcase's id, and only for visitors who did not decline", () => {
+    assert.equal(constant("WEBSITE_ID"), "3607d2c6-a9b8-4146-9aeb-bb03d6a0671b");
+    assert.equal(constant("SRC"), "https://insight.steevepommier.com/insight");
+    assert.equal(constant("DOMAINS"), "costardrouge.github.io");
+    assert.equal(constant("KEY"), "umami.disabled");
+    // An empty id loads nothing; DNT, GPC and the opt-out key stop the load itself.
+    assert.match(loader, /if \(WEBSITE_ID && !dnt && !gpc && !optedOut\(\)\)/);
+    assert.match(loader, /navigator\.doNotTrack/);
+    assert.match(loader, /navigator\.globalPrivacyControl === true/);
+    assert.match(loader, /tag\.defer = true/);
+    for (const attr of ["data-website-id", "data-domains", "data-do-not-track", "data-exclude-search", "data-exclude-hash"]) {
+      assert.match(loader, new RegExp(`setAttribute\\("${attr}"`), attr);
+    }
+    // Automatic tracking only: no custom event, no data sent by hand.
+    assert.doesNotMatch(html, /umami\.track|data-umami-event|data-auto-track/);
+  });
+
+  it("states in its legal notice what the tracker does, and offers the switch", () => {
+    assert.ok(text.includes(new URL(constant("SRC") ?? "").host), "names the tracker's host");
+    assert.ok(text.includes(constant("DOMAINS") ?? "-"), "names the counted domain");
+    assert.ok(text.includes(constant("KEY") ?? "-"), "names the opt-out key");
+    assert.match(text, /self-hosted/);
+    assert.match(text, /Do Not Track/);
+    assert.match(text, /Global Privacy Control/);
+    assert.match(text, /without query string or fragment/);
+    assert.match(text, /your country, derived from your IP address/);
+    assert.match(text, /your IP address is not stored/);
+    assert.match(text, /No cookie is set/);
+    assert.match(text, /No event is sent/);
+    assert.match(text, /does not even load the counter and nothing is sent/);
+    assert.match(html, /<button type="button" class="btn" id="audience-toggle" hidden><\/button>/);
+    assert.match(loader, /storage\.setItem\(KEY, "1"\)/);
+    assert.match(loader, /storage\.removeItem\(KEY\)/);
   });
 
   it("names its canonical address and an absolute 1200 × 630 card for link previews", () => {
@@ -39,7 +89,7 @@ describe("the showcase page", () => {
     assert.match(html, /<section class="legal[^"]*" id="legal"/);
     assert.match(html, /Steeve Pommier/);
     assert.match(html, /GitHub Pages: GitHub, Inc\./);
-    assert.match(html, /no tracker, no analytics script and no third-party resource/);
+    assert.match(html, /<h3>Audience measurement<\/h3>/);
     assert.match(html, /MIT licence/);
     assert.match(html, /<a href="#legal">Legal notice<\/a>/);
   });

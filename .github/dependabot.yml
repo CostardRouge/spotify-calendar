@@ -24,7 +24,16 @@ updates:
       eslint:
         patterns: ['eslint', '@eslint/*', 'typescript-eslint', '@typescript-eslint/*', 'eslint-plugin-*', 'eslint-config-*']
         update-types: [major]
-      # Every minor and patch, production and development together:
+      # The tools that ARE the gate (linter, formatter, type checker) get a
+      # pull request of their own: their minors add rules and reformat files
+      # with nothing that ships touched (Biome 2.6 turned four repos red on
+      # 2026-11-01), so they never hold the month's runtime updates back.
+      # eslint-config-next stays with next in minor-and-patch: they release
+      # together.
+      tooling:
+        patterns: ['typescript', 'typescript7', 'eslint']
+        update-types: [minor, patch]
+      # Every other minor and patch, production and development together:
       # one pull request a month.
       minor-and-patch:
         update-types: [minor, patch]

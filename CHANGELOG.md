@@ -11,6 +11,10 @@ history's turning points.
 
 ### Added
 
+- Sésame in front of the whole app, when its three settings are set: a visit goes through « Sign in with Sésame »
+  (silently once you are signed in there) before the Spotify sign-in, so only the people given access in Sésame can
+  use the instance.
+
 - The showcase page now counts its visits anonymously, with the author's self-hosted Umami: no cookie, no personal
   data. Its legal notice says what is counted, and a visitor can decline — Do Not Track, Global Privacy Control, or
   the switch on the notice. The app itself counts nothing.

@@ -114,6 +114,18 @@ lib/                -> config, auth cookies, Spotify client, pure filter helpers
   large library takes a while and may pause on a rate limit; results are cached
   for 30 days under `CACHE_DIR`, so later syncs only look up new artists.
 
+## Sésame in front (optional)
+
+Set `SESAME_ISSUER`, `SESAME_CLIENT_ID` and `SESAME_CLIENT_SECRET` and the
+whole instance sits behind a Sésame sign-in (the owner's OpenID Connect
+provider, `costardrouge/sesame`): `proxy.ts` sends any visit without its gate
+cookie through Sésame and back, silently when Sésame's session is open. Who
+may use the instance is decided in Sésame (membership of the app
+`spotify-calendar`, redirect `<origin>/api/auth/sesame/callback`); the Spotify
+sign-in stays behind it, unchanged, and decides whose library is shown. Left
+open: the round trip itself and `/api/health`. Empty, nothing changes; demo
+mode ignores it.
+
 ## Multi-user isolation
 
 The deployment can be shared: every piece of stored data is keyed by the

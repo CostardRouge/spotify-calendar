@@ -33,6 +33,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 
 ## Decisions at a glance (details in the topic files)
 
+- Sésame (the owner's OpenID Connect provider) can sit in FRONT of the whole app (`proxy.ts`, three `SESAME_*` variables, empty = off): it decides who may use the instance, the Spotify sign-in behind it still decides whose library — `docs/memory/architecture.md`.
 - Genres cost one paced `GET /artists/{id}` per artist: Spotify removed the bulk `GET /artists?ids=` for Dev Mode apps (Feb 2026), and tracks/albums carry no genre, so there is nothing to derive client-side. Each answer is cached (30 days) as it lands, so a 429 loses nothing. → `docs/memory/spotify-api.md`
 - A long 429 is never retried into: it is surfaced as a typed error, recorded as a server-side cooldown, and the client pre-flights it before every sync request. → `docs/memory/spotify-api.md`
 - The client library snapshot lives in IndexedDB, not localStorage (5 MB cap + synchronous writes made large libraries skip the cache entirely). → `docs/memory/data-and-sync.md`

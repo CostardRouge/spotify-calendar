@@ -27,6 +27,24 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#efe9dd" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17140f" />
+<!-- What the page is about, for search engines and answer engines: data, not a script (tests/showcase.test.ts holds it to the canonical address and the card). -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "spotify-calendar",
+  "description": "A self-hosted Next.js app that lays your saved Spotify albums and liked songs on a calendar, grouped by the day you added them — month, week, day, year, list and stats views, with filters and playback control.",
+  "url": "https://costardrouge.github.io/spotify-calendar/",
+  "image": "https://costardrouge.github.io/spotify-calendar/og-image.png",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any (self-hosted with Docker; installable as a web app)",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "license": "https://github.com/CostardRouge/spotify-calendar/blob/main/LICENSE",
+  "sameAs": "https://github.com/CostardRouge/spotify-calendar",
+  "author": { "@type": "Person", "name": "Steeve Pommier" }
+}
+</script>
 <style>
   :root {
     --bg: #efe9dd;

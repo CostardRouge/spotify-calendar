@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#efe9dd" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17140f" />
+<title>Cannot reach spotify-calendar</title>
+<!--
+  Served by public/sw.js when a page load gets no response at all. Self-contained on purpose: when this
+  shows, nothing else from the server can be fetched — no stylesheet, no icon. The colours and type are
+  app/globals.css's tokens, copied. It says what is known and nothing more: the library saved on this
+  device is still there, the server could not be reached from here.
+  Changing this file means bumping VERSION in public/sw.js.
+-->
+<style>
+  :root {
+    --bg: #efe9dd; --panel: #f6f1e7; --line: #d9d0be; --text: #211f1a; --muted: #8a8272;
+    --accent: #b0532f; --accent-wash: #f0e4d8;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17140f; --panel: #1f1b15; --line: #382f21; --text: #ece4d5; --muted: #9a8f7a;
+      --accent: #c8693e; --accent-wash: #2a2015;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center;
+    padding: max(1.5rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+      max(1.5rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    background: var(--bg); color: var(--text); font: 15px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    width: 100%; max-width: 420px; padding: 30px 28px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+  }
+  .tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 10px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+  h1 { margin: 16px 0 8px; font: 600 24px/1.2 var(--serif); letter-spacing: -.02em; }
+  p { margin: 0 0 12px; color: var(--muted); }
+  button {
+    margin-top: 8px; width: 100%; min-height: 44px; padding: 11px 14px;
+    background: var(--accent); color: #f8f3ea; border: 1px solid var(--accent); border-radius: 9px;
+    font: 600 15px var(--sans); cursor: pointer;
+  }
+  button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <span class="tag"><span class="dot" aria-hidden="true"></span>Offline</span>
+  <h1>Cannot reach spotify-calendar</h1>
+  <p>This device got no answer from the server: no network, off the home network or VPN, or the server itself is down.</p>
+  <p>Nothing is lost. Your library stays saved on this device, and the calendar opens again as soon as the server answers.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+</main>
+</body>
+</html>

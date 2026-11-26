@@ -1,19 +1,32 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import SyncProvider from "@/components/SyncProvider";
 import PlaybackProvider from "@/components/PlaybackProvider";
-
-// Set NEXT_PUBLIC_SITE_URL to your deployed origin (e.g. https://calendar.example.com)
-// so Open Graph / Twitter image URLs resolve to absolute links. Falls back to localhost.
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://127.0.0.1:3000";
+import ServiceWorker from "@/components/ServiceWorker";
+import { requestOrigin } from "@/lib/origin";
 
 const title = "spotify-calendar";
 const catchline = "Every album, on the day you saved it.";
 const description =
   "Browse your saved Spotify albums on a warm, editorial calendar — grouped by the day you added each one, filtered by year, artist and genre.";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+/**
+ * Built per request for one reason: link previews. og:image must be absolute,
+ * and the one image CI builds cannot know the address it will be reached at
+ * (lib/origin.ts), so metadataBase comes from the request. Reading the headers
+ * makes the views render per request instead of from a build-time shell; they
+ * still render the view named by the path, so the app opens straight into it
+ * as before. NEXT_PUBLIC_SITE_URL, when set at build time, still wins.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const fixed = process.env.NEXT_PUBLIC_SITE_URL;
+  const h = await headers();
+  const metadataBase = fixed ? new URL(fixed) : requestOrigin((name) => h.get(name));
+  return { ...(metadataBase ? { metadataBase } : {}), ...shared };
+}
+
+const shared: Metadata = {
   title: {
     default: title,
     template: "%s · spotify-calendar",
@@ -42,11 +55,19 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
+  // "default", not "black-translucent": the latter draws white status-bar
+  // text over the page, unreadable on the light paper theme.
   appleWebApp: {
     capable: true,
     title: "spotify-cal",
     statusBarStyle: "default",
   },
+  // A private instance: someone's library behind Spotify's sign-in (and
+  // Sésame, when set). public/robots.txt says the same to crawlers that read
+  // it first; the public page is the showcase on GitHub Pages.
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+  // Previews still matter when a link is pasted into a chat: the card is a
+  // drawing (no cover, no title, no account of anyone's), outside the gate.
   openGraph: {
     type: "website",
     siteName: title,
@@ -77,6 +98,10 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#17140f" },
   ],
   colorScheme: "light dark",
+  // Lets an installed app reach the rounded corners and the notch, which is
+  // what makes env(safe-area-inset-*) real; app/globals.css pads the top bar,
+  // the sides and the tab bar with them.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -99,6 +124,7 @@ export default function RootLayout({
         <SyncProvider>
           <PlaybackProvider>{children}</PlaybackProvider>
         </SyncProvider>
+        <ServiceWorker />
       </body>
     </html>
   );

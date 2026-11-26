@@ -19,6 +19,27 @@ history's turning points.
   data. Its legal notice says what is counted, and a visitor can decline — Do Not Track, Global Privacy Control, or
   the switch on the notice. The app itself counts nothing.
 
+- On a phone, the filters open as a drawer over the calendar instead of squeezing it into a sliver, and close with
+  a tap beside them or on a view tab.
+- Installed to a home screen, the app now shows a "Cannot reach spotify-calendar" page when the server cannot be
+  reached, instead of a blank screen; the library saved on the device is untouched.
+- Long-press shortcuts on the installed app's icon: Month, Week, Year and Stats.
+- The showcase page describes the app to search engines in a structured form.
+
+### Changed
+
+- Search engines and AI crawlers are asked to stay out of your instance; links shared in a chat still get the app's
+  preview card, now pointing at the address the link was opened from instead of a local one.
+
+### Fixed
+
+- On an iPhone, the bottom tab bar no longer sits under the home indicator or the rounded corners of an installed
+  app, and the top bar clears the notch in landscape.
+- On a phone, the calendar header's month picker and "Latest" button no longer run off the right edge, the week
+  view stacks its days instead of seven unreadable columns, and month cells show their covers and counts without
+  hiding the day number.
+- Tapping a search box or a year field on a phone no longer zooms the page in.
+
 ## [1.1.0] - 2026-10-22 — Habanera
 
 ### Added

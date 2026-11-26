@@ -9,7 +9,11 @@ import { join } from "node:path";
 // nothing else; this suite holds the HTML to that, and the notice to the code.
 const SITE = "https://costardrouge.github.io/spotify-calendar/";
 const html = readFileSync(join(process.cwd(), "showcase", "index.html"), "utf8");
-const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)];
+// JSON-LD is data the browser never runs, so it is not counted as a script.
+const JSON_LD = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/;
+const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)].filter(
+  ([, attrs]) => !attrs.includes("application/ld+json"),
+);
 const loader = scripts[0]?.[2] ?? "";
 const constant = (name: string) => loader.match(new RegExp(`const ${name} = "([^"]*)"`))?.[1];
 // The notice's visible text: no script, no style, no comment, no tag.
@@ -24,7 +28,7 @@ describe("the showcase page", () => {
   it("loads exactly one inline script and no other third-party resource", () => {
     assert.equal(scripts.length, 1, "one script");
     assert.equal(scripts[0]?.[1], "", "inline, no src or attribute");
-    assert.equal((html.match(/<script/g) ?? []).length, 1);
+    assert.equal((html.replace(JSON_LD, "").match(/<script/g) ?? []).length, 1);
     // A resource is a src= or a stylesheet/icon href=; links to GitHub are fine.
     assert.equal((html.match(/\bsrc="https?:/g) ?? []).length, 0, "no remote src");
     for (const link of html.match(/<link[^>]*>/g) ?? []) {
@@ -83,6 +87,19 @@ describe("the showcase page", () => {
     // The card is public/og-image.png, which pages.yml copies beside the page.
     const png = readFileSync(join(process.cwd(), "public", "og-image.png"));
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1200, 630]);
+  });
+
+  it("describes itself as a SoftwareApplication, at its canonical address, with the card", () => {
+    const blocks = html.match(new RegExp(JSON_LD.source, "g")) ?? [];
+    assert.equal(blocks.length, 1, "one JSON-LD block");
+    const data = JSON.parse(JSON_LD.exec(html)?.[1] ?? "{}");
+    assert.equal(data["@context"], "https://schema.org");
+    assert.equal(data["@type"], "SoftwareApplication");
+    assert.equal(data.name, "spotify-calendar");
+    assert.equal(data.url, SITE);
+    assert.equal(data.image, `${SITE}og-image.png`);
+    assert.equal(data.author?.name, "Steeve Pommier", "the legal notice's publisher");
+    for (const link of [data.license, data.sameAs]) assert.ok(html.includes(`href="${link}"`), `${link} is linked from the page`);
   });
 
   it("carries the legal notice: publisher, host, what is measured, licence", () => {

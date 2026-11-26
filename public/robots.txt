@@ -1,0 +1,7 @@
+# A private, self-hosted instance: one household's Spotify libraries behind
+# Spotify's sign-in (and Sésame, when it is set). Nothing here is meant for a
+# search index or an AI crawler; the pages also carry
+# <meta name="robots" content="noindex">. The project's public page is the
+# showcase: https://costardrouge.github.io/spotify-calendar/
+User-agent: *
+Disallow: /

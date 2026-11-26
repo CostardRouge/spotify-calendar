@@ -55,6 +55,14 @@ export default function CalendarApp({
 
   const [filters, setFilters] = useState<Filters>(emptyFilters());
   const [collapsed, setCollapsed] = useState(false);
+  // On a phone the panel is a drawer, closed on every load. It is its own
+  // state, not `collapsed`, so opening it on a phone never writes `panel=` into
+  // a link that a desktop then opens.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const toggleFilters = () => {
+    if (window.matchMedia("(max-width: 768px)").matches) setDrawerOpen((o) => !o);
+    else setCollapsed((c) => !c);
+  };
   const [settingsOpen, setSettingsOpen] = useState(false);
   // The view is owned by the route (/month, /week, …), so it's known before the
   // first paint — no post-mount correction, no flash of the wrong view.
@@ -185,8 +193,9 @@ export default function CalendarApp({
       <header className="topbar">
         <button
           className="btn icon"
-          onClick={() => setCollapsed((c) => !c)}
+          onClick={toggleFilters}
           title="Toggle filters"
+          aria-controls="filters"
         >
           ☰
         </button>
@@ -234,7 +243,15 @@ export default function CalendarApp({
           filters={filters}
           setFilters={setFilters}
           collapsed={collapsed}
+          drawerOpen={drawerOpen}
         />
+        {drawerOpen && (
+          <button
+            className="side-scrim"
+            aria-label="Close filters"
+            onClick={() => setDrawerOpen(false)}
+          />
+        )}
 
         <section className="cal">
           <div className="cal-head">
@@ -334,7 +351,10 @@ export default function CalendarApp({
           <button
             key={v.id}
             className={"bnav-btn" + (view === v.id ? " active" : "")}
-            onClick={() => setView(v.id)}
+            onClick={() => {
+              setView(v.id);
+              setDrawerOpen(false);
+            }}
           >
             {v.label}
           </button>

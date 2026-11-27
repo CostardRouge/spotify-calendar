@@ -50,4 +50,7 @@ export const COOKIE = {
   // snapshots, the server-side library store) is keyed by this id so multiple
   // accounts never read or overwrite each other's data.
   userId: "sp_uid",
+  // Spotify display name of the session owner, set at login, shown in the
+  // account menu. Never a key for anything: names are not unique.
+  userName: "sp_name",
 };

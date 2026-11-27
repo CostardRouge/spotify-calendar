@@ -6,6 +6,7 @@ import SyncProvider from "@/components/SyncProvider";
 import PlaybackProvider from "@/components/PlaybackProvider";
 import ServiceWorker from "@/components/ServiceWorker";
 import { requestOrigin } from "@/lib/origin";
+import { THEME_BOOT_SCRIPT } from "@/lib/prefs";
 
 // The app is called Sillon — the groove of a record, the trace your listening
 // leaves in time. "Spotify" stays out of the name: Spotify's developer terms
@@ -134,15 +135,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
       <body>
-        {/* Runs before the body paints: mirror the URL's collapsed-panel flag
-            onto <html> so the sidebar is styled correctly on the very first
-            frame, avoiding a flash of the expanded panel on refresh. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "try{if(new URLSearchParams(location.search).get('panel')==='0')document.documentElement.setAttribute('data-panel-collapsed','')}catch(e){}",
-          }}
-        />
+        {/* Runs before the body paints: a theme this device chose in the
+            account menu (lib/prefs.ts) is on <html> before the first frame,
+            so a forced day or night never flashes the device's own theme. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <SyncProvider>
           <PlaybackProvider>{children}</PlaybackProvider>
         </SyncProvider>

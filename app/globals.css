@@ -44,8 +44,10 @@
   color-scheme: dark;
 }
 
+/* Day: the device's setting, unless this device chose night in the account
+   menu (lib/prefs.ts sets data-theme on <html> before the first paint)… */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme="night"]) {
     /* Day — the same system on warm paper */
     --bg: #f6f1ea;
     --panel: #fffaf3;
@@ -73,6 +75,34 @@
     color-scheme: light;
   }
 }
+/* …and the same palette when this device chose day whatever its setting. */
+:root[data-theme="day"] {
+  /* Day — the same system on warm paper */
+  --bg: #f6f1ea;
+  --panel: #fffaf3;
+  --panel2: #ede5d9;
+  --line: #e3d9cb;
+  --line-soft: #ece4d8;
+  --text: #1a1511;
+  --muted: #6b6157;
+  --faint: #a3978a;
+  --accent: #c2410c;    /* darker than night's, so it reads as text on paper */
+  --accent2: #9a3412;
+  --accent-wash: #fbe6da;
+  --cell: #fffaf3;
+  --cell-empty: #efe8dd;
+  --cell-hover: #f3ebdf;
+  --groove: #ddd2c3;
+  --record: #1a1511;
+  --stamp-bg: #c2410c;
+  --stamp-fg: #ffffff;
+  --on-accent: #ffffff;
+  --amber: #a9781f;
+  --danger: #b3361f;
+  --ok: #4f7a2f;
+  --shadow: 60 40 20;
+  color-scheme: light;
+}
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -99,7 +129,7 @@ a { color: var(--accent); text-decoration: none; }
    corners and the notch of an installed app; these insets keep the top bar
    and the sides clear of them (the tab bar takes the bottom one itself). */
 .app {
-  display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+  display: flex; height: 100vh; height: 100dvh;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
 
@@ -113,44 +143,116 @@ a { color: var(--accent); text-decoration: none; }
   box-shadow: 0 0 0 1px var(--line);
 }
 
-/* ---- Top bar ---- */
-.topbar {
-  display: flex; align-items: center; gap: 14px; padding: 12px 20px;
-  background: var(--bg);
-  flex: 0 0 auto;
-  position: relative;
+/* ---- The frame: a side rail on a computer; header + tab bar on a phone ----
+   The views moved from a top bar into the rail, the account to its foot, and
+   the filters into a bar above the views (design canvas, iteration 3). */
+.rail {
+  width: 232px; flex: 0 0 232px; background: var(--panel);
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 22px 14px 14px; position: relative; z-index: 70;
 }
-.topbar-actions { display: flex; align-items: center; gap: 12px; }
-/* Options button and bottom nav are mobile-only — hidden on desktop (`.btn`
-   in the selector so it outranks `.btn`'s own display, declared below). */
-.btn.settings-btn { display: none; }
-.bottomnav { display: none; }
-.topbar .logo {
+.logo {
   display: flex; align-items: center; gap: 10px;
   font-family: var(--display); font-weight: 800; font-size: 21px;
   letter-spacing: -.04em;
 }
-.topbar .spacer { flex: 1; }
+.rail .logo { padding: 0 10px 22px; }
+.rail-nav { display: flex; flex-direction: column; gap: 4px; }
+.rail-btn {
+  display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px;
+  border: none; border-radius: 12px; background: transparent; color: var(--muted);
+  font-size: 15px; font-weight: 500; text-align: left;
+  transition: background .15s, color .15s;
+}
+.rail-btn:hover { background: var(--panel2); color: var(--text); }
+.rail-btn.active { background: var(--panel2); color: var(--accent); font-weight: 600; }
+.rail .needle-btn { margin-top: 14px; min-height: 44px; }
+.rail .account { margin-top: auto; }
+.stage { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.phone-head { display: none; }
+.spacer { flex: 1; }
+.bottomnav { display: none; }
 
-/* ---- Topbar action cluster: counter · sync · logout ---- */
-.topbar-actions .stat,
-.topbar-actions .sync-widget,
-.topbar-actions .btn {
-  height: 38px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
+/* ---- Segmented controls: what to show, the month layout, the theme ---- */
+.seg {
+  display: flex; gap: 2px; flex: 0 0 auto;
+  background: var(--panel); border-radius: 999px; padding: 4px;
 }
-.topbar-actions .stat {
-  gap: 6px; padding: 0 4px;
-  background: none; font-size: 13px; color: var(--muted);
+.seg button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 34px; padding: 0 13px; border: none; border-radius: 999px;
+  background: transparent; color: var(--muted); font-size: 13px; font-weight: 500;
+  white-space: nowrap; transition: background .15s, color .15s;
 }
-.topbar-actions .stat b { color: var(--text); font-weight: 600; }
-.topbar-actions .stat .stat-sep { opacity: .7; }
-.topbar-actions .sync-widget { padding: 0 14px; }
-.topbar-actions .btn { padding: 0 16px; }
-/* The running build's version (lib/version.ts): something to look up, not to read. */
-.topbar-actions .version { font-size: 11px; color: var(--muted); opacity: .8; }
+.seg button:hover { color: var(--text); }
+.seg button.on { background: var(--text); color: var(--bg); font-weight: 600; }
+.seg .ico { width: 16px; height: 16px; }
+.seg-n { opacity: .65; font-weight: 500; }
+.layout-seg button.on { background: var(--accent-wash); color: var(--accent); }
+
+/* ---- The account: a button at the rail's foot, a menu that opens upward;
+   on a phone an avatar in the header and a sheet from the bottom ---- */
+.account { position: relative; }
+.account-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px;
+  border: none; border-radius: 16px; background: var(--panel2); color: var(--text);
+  text-align: left; transition: background .15s, box-shadow .15s;
+}
+.account-btn:hover { background: var(--cell-hover); }
+.account-btn[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--accent); }
+.avatar {
+  position: relative; flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+  background: var(--accent); color: var(--on-accent);
+  font-family: var(--display); font-weight: 800; font-size: 15px;
+  display: grid; place-items: center;
+}
+.avatar.big { width: 50px; height: 50px; font-size: 19px; }
+.avatar-dot {
+  position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px;
+  border-radius: 50%; box-shadow: 0 0 0 2px var(--panel2);
+}
+.account-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.account-name, .account-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.account-name { font-size: 14px; font-weight: 600; }
+.account-sub { font-size: 12px; color: var(--muted); }
+.account-chev .ico { width: 14px; height: 14px; transform: rotate(180deg); }
+.account-scrim, .sheet-grip { display: none; }
+.account-menu {
+  position: absolute; z-index: 80; width: 360px;
+  background: var(--panel2); border-radius: 24px; padding: 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  box-shadow: 0 30px 80px -20px rgba(var(--shadow) / .7), 0 0 0 1px var(--line);
+  animation: menupop .18s var(--ease);
+}
+.account-rail .account-menu { left: 0; bottom: calc(100% + 10px); }
+.am-head { display: flex; align-items: center; gap: 14px; padding: 10px 10px 8px; }
+.am-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.am-name { font-size: 16px; font-weight: 600; }
+.am-sub { font-size: 13px; color: var(--muted); }
+.am-library {
+  background: var(--panel); border-radius: 18px; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.am-count { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-size: 14px; color: var(--muted); }
+.am-count b { font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: -.03em; color: var(--text); }
+.am-status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.am-actions { display: flex; gap: 8px; }
+.am-actions .btn.primary { flex: 1; }
+.am-theme { display: flex; flex-direction: column; gap: 8px; padding: 10px 10px 4px; }
+.am-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.am-theme .seg { background: var(--bg); }
+.am-theme .seg button { flex: 1; min-height: 38px; font-size: 14px; }
+.am-sep { height: 1px; background: var(--line); margin: 6px 10px; }
+.am-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 12px;
+  border: none; border-radius: 12px; background: transparent; color: var(--text);
+  font-size: 14px; text-align: left;
+}
+.am-item:hover { background: var(--cell-hover); color: var(--text); }
+.am-item .ico { width: 18px; height: 18px; }
+.am-item.danger { color: var(--danger); }
+.am-aside { margin-left: auto; font-size: 13px; color: var(--muted); }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
 
 /* ---- Buttons ---- */
 .btn {
@@ -174,40 +276,40 @@ a { color: var(--accent); text-decoration: none; }
   color: var(--text);
 }
 
-.main { display: flex; flex: 1; min-height: 0; position: relative; }
-/* The phone drawer's backdrop (CalendarApp); desktop never shows it. */
-.side-scrim { display: none; }
+/* ---- The filter bar: always above the views ---- */
+.filterbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  padding: 16px 26px 4px; flex: 0 0 auto;
+}
+.fsearch { position: relative; flex: 1 1 220px; max-width: 420px; display: flex; align-items: center; }
+.fsearch .ico { position: absolute; left: 14px; width: 18px; height: 18px; color: var(--muted); pointer-events: none; }
+.fsearch .search-input { padding-left: 42px; min-height: 42px; background: var(--panel); }
+.fmenu { position: relative; }
+.fchip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px 0 14px;
+  border: 1px solid var(--line); border-radius: 999px; background: transparent;
+  color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap;
+  transition: border-color .15s, background .15s;
+}
+.fchip .ico { width: 14px; height: 14px; color: var(--muted); }
+.fchip:hover { border-color: var(--faint); }
+.fchip.on { border-color: var(--accent); background: var(--accent-wash); color: var(--accent); font-weight: 600; }
+.fchip.on .ico { color: inherit; }
+.fmenu-scrim { display: none; }
+.fmenu-pop {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 75; width: 300px;
+  background: var(--panel2); border-radius: 20px; padding: 10px;
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 24px 60px -20px rgba(var(--shadow) / .7), 0 0 0 1px var(--line);
+  animation: menupop .18s var(--ease);
+}
+.fmenu-pop .mini-search { background: var(--panel); }
+.fmenu-pop .checklist { max-height: 300px; margin-top: 0; }
+.fmenu-title { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 4px 4px 0; }
+.filterbar .stat { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.filterbar .stat b { color: var(--text); font-weight: 600; }
+.filterbar .stat .clear-link { margin: 0 0 0 8px; }
 
-/* ---- Side / filter panel ---- */
-.side {
-  width: 300px; flex: 0 0 300px;
-  background: var(--panel); border-radius: 0 22px 0 0;
-  display: flex; flex-direction: column;
-  overflow: hidden;
-}
-.side.collapsed { width: 0; flex-basis: 0; }
-
-/* Pre-hydration: honor the collapsed flag the head script read from the URL,
-   so the panel is already closed on the first paint (no flash of the open
-   panel before React mounts). */
-html[data-panel-collapsed] .side { width: 0; flex-basis: 0; }
-
-/* Only animate the panel once the app has restored its initial state. This
-   keeps a restored-collapsed panel from playing the open→close animation on
-   load, while user toggles afterwards still animate. */
-html.app-ready .side {
-  transition: width .24s var(--ease), flex-basis .24s var(--ease);
-}
-.side-inner { padding: 22px 18px; overflow-y: auto; width: 300px; }
-.side h3 {
-  margin: 0 0 18px; font-family: var(--display); font-size: 17px; font-weight: 700;
-  letter-spacing: -.02em;
-}
-.filter-group { margin-bottom: 24px; }
-.filter-group > .gl {
-  display: block; font-size: 11px; font-weight: 600; color: var(--muted);
-  margin-bottom: 10px; text-transform: uppercase; letter-spacing: .1em;
-}
 .search-input, .mini-search {
   width: 100%; padding: 10px 14px; background: var(--panel2);
   border: 1px solid transparent; border-radius: 999px;
@@ -215,9 +317,7 @@ html.app-ready .side {
   transition: border-color .18s;
 }
 .search-input::placeholder, .mini-search::placeholder { color: var(--muted); }
-.search-input:focus, .mini-search:focus {
-  outline: none; border-color: var(--accent);
-}
+.search-input:focus, .mini-search:focus { outline: none; border-color: var(--accent); }
 .checklist {
   max-height: 180px; overflow-y: auto; margin-top: 10px;
   background: var(--bg); border-radius: 14px; padding: 6px;
@@ -231,16 +331,17 @@ html.app-ready .side {
 .checkrow .cnt { margin-left: auto; color: var(--muted); font-size: 12px; }
 .range-row { display: flex; align-items: center; gap: 8px; }
 .range-row input[type=number] {
-  width: 84px; padding: 8px 12px; background: var(--panel2);
+  width: 100px; padding: 9px 12px; background: var(--panel);
   border: 1px solid transparent; border-radius: 999px; color: var(--text);
-  font-family: inherit; font-size: 13px;
+  font-family: inherit; font-size: 14px;
 }
 .range-row span { color: var(--muted); }
+/* No underline: the owner found the underlined links noisy (iteration 3). */
 .clear-link {
   background: none; border: none; color: var(--accent); font-size: 13px; font-weight: 600;
-  padding: 0; margin-top: 8px; cursor: pointer;
+  padding: 0; margin-top: 8px; cursor: pointer; align-self: flex-start;
 }
-.clear-link:hover { color: var(--accent2); text-decoration: underline; }
+.clear-link:hover { color: var(--accent2); }
 .no-match { color: var(--muted); font-size: 13px; padding: 6px; }
 
 /* ---- Calendar shell ---- */
@@ -273,42 +374,118 @@ html.app-ready .side {
   display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr;
   gap: 8px; flex: 1; min-height: 0;
 }
+/* ---- Month, grid: the day's first cover fills its cell ---- */
 .day {
-  background: var(--cell-empty); border-radius: var(--radius);
-  padding: 8px 10px; display: flex; flex-direction: column; position: relative;
-  overflow: hidden; transition: transform .18s var(--ease), box-shadow .18s, background .18s;
+  position: relative; min-height: 0; border-radius: var(--radius);
+  background: var(--cell-empty);
+  transition: transform .18s var(--ease), box-shadow .18s;
 }
-.day.other { opacity: .3; }
+.day.other { background: transparent; }
 .day.has { cursor: pointer; background: var(--cell); }
-.day.has:hover { background: var(--cell-hover); transform: translateY(-2px); }
+.day.has:hover { transform: translateY(-2px); z-index: 30; }
 .day.has:active { transform: scale(.98); }
+.day-art { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; background: var(--panel2); }
+.day-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* A shade at the top and the bottom keeps the number and the count readable
+   over a white sleeve as over a black one. */
+.day-art::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(13 10 8 / .45), transparent 40%, transparent 62%, rgba(13 10 8 / .5));
+}
 .day .dnum {
-  font-size: 13px; font-weight: 600; color: var(--faint);
-  margin-bottom: 4px; flex: 0 0 auto;
-  position: relative; z-index: 21; /* above the fan, which may lean into it */
+  position: absolute; left: 8px; top: 8px; z-index: 2;
+  min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px;
+  display: grid; place-items: center;
+  font-family: var(--display); font-size: 12px; font-weight: 700; color: var(--faint);
 }
-.day.has .dnum { color: var(--text); }
-.day.today { box-shadow: inset 0 0 0 2px var(--accent); }
-.day.today .dnum { color: var(--accent); font-weight: 700; }
-/* The day's covers, fanned like records pulled half out of a crate. They
-   open a little wider under the pointer, before the day is opened. */
-.covers { position: relative; flex: 1; min-height: 0; }
-.covers img {
-  position: absolute; left: 0; bottom: 2px; width: 54px; height: 54px;
-  border-radius: 8px; object-fit: cover;
-  box-shadow: 0 6px 14px -4px rgba(var(--shadow) / .55);
-  transform: translateX(var(--fan-x, 0)) rotate(var(--fan-r, 0deg));
-  transform-origin: 50% 100%;
-  transition: transform .26s var(--ease);
-}
-.day.has:hover .covers img {
-  transform: translateX(calc(var(--fan-x, 0) * 1.45)) rotate(calc(var(--fan-r, 0deg) * 1.6));
-}
+.day.has .dnum { background: rgba(13 10 8 / .78); color: #f4ece2; }
+.day.other .dnum { opacity: .45; }
+.day.today { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+.day.today .dnum { color: var(--accent); }
+.day.today.has .dnum { background: var(--accent); color: var(--on-accent); }
 .day .count {
-  position: absolute; top: 8px; right: 10px;
-  font-family: var(--display); font-size: 12px; font-weight: 700;
-  color: var(--accent); z-index: 20;
+  position: absolute; right: 8px; top: 8px; z-index: 2;
+  height: 26px; padding: 0 9px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--accent); color: var(--on-accent);
+  font-family: var(--display); font-size: 11px; font-weight: 800;
 }
+.day-more { position: absolute; right: 8px; bottom: 8px; z-index: 2; display: flex; }
+.day-more img {
+  width: 28px; height: 28px; border-radius: 6px; object-fit: cover;
+  margin-left: -8px; box-shadow: 0 0 0 2px #15110e;
+}
+/* The whole day beside its cell, under a pointer that hovers — opened after a
+   beat (the animation's delay) so sweeping across the month does not flash it. */
+.day-peek {
+  display: none; position: absolute; top: 0; left: calc(100% + 10px); z-index: 40;
+  width: 420px; flex-direction: column; gap: 12px; padding: 16px; border-radius: 20px;
+  background: var(--panel2); cursor: default; pointer-events: none;
+  box-shadow: 0 24px 60px -16px rgba(var(--shadow) / .7), 0 0 0 1px var(--line);
+  animation: menupop .18s var(--ease) .3s both;
+}
+.day.peek-left .day-peek { left: auto; right: calc(100% + 10px); }
+.day.peek-up .day-peek { top: auto; bottom: 0; }
+@media (hover: hover) and (min-width: 769px) {
+  .day.has:hover .day-peek { display: flex; }
+}
+.peek-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.peek-date { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: -.02em; }
+.peek-n, .peek-hint { font-size: 12px; color: var(--muted); }
+.peek-covers { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.peek-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.peek-item img { width: 100%; aspect-ratio: 1; border-radius: 10px; object-fit: cover; }
+.peek-name {
+  font-size: 12px; font-weight: 600; line-height: 1.25; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.peek-artist { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- Month, wall: a numbered tile per day, then its covers full size ---- */
+.layout-tools { display: flex; align-items: center; gap: 8px; }
+.order-btn { background: var(--panel); }
+.order-btn .ico { width: 16px; height: 16px; }
+.wall-view {
+  flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+  padding-bottom: 96px; /* room under the floating mini-player */
+}
+.wall-hint {
+  display: flex; align-items: center; gap: 14px; flex: 0 0 auto;
+  padding: 10px 10px 10px 16px; border-radius: 16px; background: var(--accent-wash); font-size: 14px;
+}
+.wall-hint-n { font-family: var(--display); font-weight: 800; font-size: 16px; color: var(--accent); }
+.wall-hint-text { flex: 1; line-height: 1.45; }
+.wall-hint .btn { background: var(--bg); }
+.wall-empty { color: var(--muted); margin: 30px 0; }
+.wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; }
+.wall-day { display: contents; }
+.wall-date, .wall-cover {
+  position: relative; aspect-ratio: 1; padding: 0; border: none; border-radius: 14px; overflow: hidden;
+  content-visibility: auto; contain-intrinsic-size: auto 140px;
+}
+.wall-date {
+  display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
+  padding: 12px 14px; background: var(--panel); color: var(--text); text-align: left;
+  transition: background .15s;
+}
+.wall-date:hover { background: var(--panel2); }
+.wall-wd { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.wall-n { font-family: var(--display); font-weight: 800; font-size: 46px; line-height: .9; letter-spacing: -.04em; color: var(--accent); }
+.wall-count { font-size: 12px; color: var(--muted); }
+.wall-cover { background: var(--panel2); }
+.wall-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s var(--ease); }
+.wall-cover:hover img { transform: scale(1.04); }
+.wall-caption {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 10px 9px;
+  display: flex; flex-direction: column; gap: 1px; text-align: left; color: #f4ece2;
+  background: linear-gradient(180deg, transparent, rgba(13 10 8 / .9));
+  opacity: 0; transition: opacity .18s;
+}
+.wall-cover:hover .wall-caption, .wall-cover:focus-visible .wall-caption { opacity: 1; }
+.wall-title {
+  font-size: 12px; font-weight: 600; line-height: 1.2; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.wall-artist { font-size: 11px; color: #cfc2b2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- Centered screens (login / loader) ---- */
 .center-screen {
@@ -402,44 +579,50 @@ html.app-ready .side {
 
 /* Item name links through to the album/song's Spotify detail page. */
 .al-link { color: inherit; text-decoration: none; }
-.al-link:hover { color: var(--accent); text-decoration: underline; }
-
-/* ---- View switcher (desktop) ---- */
-.viewswitch {
-  display: flex; gap: 2px; margin-left: 8px;
-  background: var(--panel); border-radius: 999px; padding: 4px;
-}
-.vbtn {
-  display: inline-flex; align-items: center; gap: 7px;
-  background: transparent; border: none; color: var(--muted);
-  padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 500;
-  transition: color .16s, background .16s;
-}
-.vbtn .ico { width: 17px; height: 17px; }
-.vbtn:hover { color: var(--text); }
-.vbtn.active { background: var(--text); color: var(--bg); font-weight: 600; }
+.al-link:hover { color: var(--accent); }
 
 .view-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 
-/* ---- Week view ---- */
-.week-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-.week-col {
-  background: var(--cell); border-radius: var(--radius);
-  display: flex; flex-direction: column; overflow: hidden;
+/* ---- Week view: seven columns, each led by a big cover ---- */
+.week-grid {
+  flex: 1; min-height: 0; overflow-y: auto; align-items: start;
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px;
+  padding-bottom: 96px;
 }
-.week-col.today { box-shadow: inset 0 0 0 2px var(--accent); }
-.week-col-head { display: flex; align-items: baseline; gap: 6px; padding: 10px 12px 6px; }
+.week-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.week-col-head { display: flex; align-items: baseline; gap: 8px; padding: 2px 2px 0; }
 .week-col-head .wd { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-.week-col-head .dn { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: -.03em; }
+.week-col-head .dn { font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: -.03em; }
 .week-col.today .dn { color: var(--accent); }
-.week-col-head .count {
-  margin-left: auto; font-family: var(--display); font-size: 12px; font-weight: 700; color: var(--accent);
+.week-col-head .count { margin-left: auto; font-family: var(--display); font-size: 12px; font-weight: 700; color: var(--accent); }
+.week-body { display: flex; flex-direction: column; gap: 8px; }
+.wk-lead { display: flex; flex-direction: column; gap: 8px; }
+.wk-cover { position: relative; }
+.wk-art {
+  display: block; width: 100%; aspect-ratio: 1; padding: 0; border: none; border-radius: 14px;
+  overflow: hidden; background: var(--panel2);
+  box-shadow: 0 10px 24px -12px rgba(var(--shadow) / .6);
 }
-.week-col-body { flex: 1; overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
-.week-empty { color: var(--faint); text-align: center; margin-top: 12px; font-size: 18px; }
-.week-item { display: flex; gap: 9px; align-items: center; background: none; border: none; padding: 6px; border-radius: 12px; text-align: left; color: var(--text); transition: background .12s; }
+.wk-art img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s var(--ease); }
+.wk-art:hover img { transform: scale(1.03); }
+.wk-play {
+  position: absolute; right: 8px; bottom: 8px; width: 44px; height: 44px; border-radius: 50%;
+  border: none; background: var(--accent); color: var(--on-accent); font-size: 14px;
+  display: grid; place-items: center; cursor: pointer;
+  box-shadow: 0 6px 16px -4px rgba(var(--shadow) / .6);
+}
+.wk-lead-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.wk-lead-text .wi-name { font-size: 14px; white-space: normal; }
+.week-empty {
+  aspect-ratio: 1; border-radius: 14px; border: 1.5px dashed var(--line);
+  display: grid; place-items: center; color: var(--faint); font-size: 13px;
+}
+.week-item {
+  display: flex; gap: 10px; align-items: center; background: none; border: none; padding: 4px;
+  border-radius: 12px; text-align: left; color: var(--text); transition: background .12s;
+}
 .week-item:hover { background: var(--cell-hover); }
-.week-item img { width: 40px; height: 40px; border-radius: 7px; object-fit: cover; flex: 0 0 auto; }
+.week-item img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; flex: 0 0 auto; }
 .wi-text { min-width: 0; display: flex; flex-direction: column; }
 .wi-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wi-artist { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -520,11 +703,14 @@ html.app-ready .side {
 .disc { width: 100%; height: 100%; display: block; overflow: visible; }
 .disc .platter { fill: var(--panel); }
 .disc .groove { fill: none; stroke: var(--groove); stroke-width: 1; transition: stroke .15s; }
-.disc .groove.record-month { stroke: var(--accent); stroke-width: 1.6; }
-.disc .groove.hot { stroke: var(--text); stroke-width: 1.6; }
-.disc .dot { fill: var(--accent); cursor: pointer; transition: r .15s var(--ease); }
-.disc .dot.dim { fill: var(--faint); }
-.disc .dot:hover, .disc .dot:focus-visible { fill: var(--text); outline: none; }
+.disc .groove.shown { stroke: var(--faint); stroke-width: 1.4; }
+/* Quiet dots for every month but one, whose days show their covers
+   (components/YearView): the colour on the record is the music's. */
+.disc .dot { fill: var(--faint); cursor: pointer; transition: r .15s var(--ease); }
+.disc .dot.dim:hover, .disc .dot.dim:focus-visible { fill: var(--text); outline: none; }
+.disc .dot.cover { stroke: var(--groove); stroke-width: 1; }
+.disc .dot.cover.many { stroke: var(--accent); stroke-width: 1.4; }
+.disc .dot.cover:hover { stroke: var(--text); stroke-width: 1.8; }
 .disc .label { fill: var(--accent); }
 .disc .label-year { fill: var(--on-accent); font-family: var(--display); font-weight: 800; letter-spacing: -.04em; }
 .disc .label-sub { fill: var(--on-accent); font-family: var(--sans); font-weight: 600; letter-spacing: .06em; }
@@ -542,33 +728,95 @@ html.app-ready .side {
 .disc-month .n { font-family: var(--display); font-size: 13px; font-weight: 700; text-align: right; }
 .disc-month.empty { color: var(--faint); }
 
-/* ---- Stats view ---- */
-.stats-view { flex: 1; overflow-y: auto; }
-.stats-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 34px; }
-.stat-card { background: var(--panel); padding: 18px; border-radius: 20px; }
-.stat-card:first-child { background: var(--accent); color: var(--on-accent); }
-.stat-card:first-child .stat-label, .stat-card:first-child .stat-sub { color: var(--on-accent); }
-.stat-value { font-family: var(--display); font-size: 30px; font-weight: 700; line-height: 1.05; letter-spacing: -.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stat-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-top: 8px; }
-.stat-sub { font-size: 13px; color: var(--muted); margin-top: 5px; }
-.stats-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
-.chart-block h3 { font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 16px; }
-.bar-chart { display: flex; flex-direction: column; gap: 7px; }
+/* ---- Stats view: a bento grid, tiles sized by what they hold ---- */
+.stats-view { flex: 1; overflow-y: auto; padding-bottom: 96px; }
+.bento {
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-rows: minmax(132px, auto); gap: 12px;
+  grid-template-areas:
+    "hero hero albums songs top top"
+    "hero hero artists days top top"
+    "busy busy first first oldest oldest"
+    "years years years dec dec dec";
+}
+.tile {
+  position: relative; overflow: hidden; min-width: 0;
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--panel); border-radius: 22px; padding: 18px 20px;
+}
+.t-hero { grid-area: hero; min-height: 300px; background: var(--record); }
+.t-albums { grid-area: albums; }
+.t-songs { grid-area: songs; }
+.t-artists { grid-area: artists; }
+.t-days { grid-area: days; }
+.t-top { grid-area: top; }
+.t-busy { grid-area: busy; }
+.t-first { grid-area: first; }
+.t-oldest { grid-area: oldest; flex-direction: row; align-items: center; gap: 16px; }
+.t-years { grid-area: years; }
+.t-decades { grid-area: dec; }
+.tile.filled { background: var(--accent); color: var(--on-accent); }
+.tile-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tile.filled .tile-label { color: var(--on-accent); }
+.tile-big {
+  margin-top: auto; font-family: var(--display); font-weight: 800;
+  font-size: clamp(34px, 3.4vw, 52px); letter-spacing: -.04em; line-height: 1;
+}
+.tile-mid { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -.02em; line-height: 1.2; }
+.tile-sub { font-size: 13px; color: var(--muted); }
+/* The top artist over its latest cover: fixed light text on a dark shade, in
+   both themes, since the picture is the background. */
+.tile-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.t-hero::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(13 10 8 / .05) 30%, rgba(13 10 8 / .88));
+}
+.tile-hero-text { position: relative; z-index: 1; margin-top: auto; display: flex; flex-direction: column; gap: 6px; color: #f4ece2; }
+.tile-hero-text .tile-label { color: #ff8a63; }
+.tile-hero-text .tile-sub { color: #e6dbcd; }
+.hero-name { overflow-wrap: anywhere; }
+.top-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.top-list li { display: flex; align-items: center; gap: 12px; }
+.top-rank { width: 16px; font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--faint); }
+.top-list img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; background: var(--panel2); }
+.top-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; font-size: 15px; font-weight: 600; }
+.top-bar { display: block; height: 5px; border-radius: 999px; background: var(--panel2); overflow: hidden; }
+.top-bar span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.top-n { font-family: var(--display); font-weight: 700; font-size: 15px; }
+.busy-covers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.busy-covers img { width: 52px; height: 52px; border-radius: 9px; object-fit: cover; }
+.t-first .tile-mid { margin-top: auto; }
+.oldest-cover {
+  width: 104px; height: 104px; flex: 0 0 auto; border-radius: 12px; object-fit: cover;
+  transform: rotate(-4deg); box-shadow: 0 10px 24px -8px rgba(var(--shadow) / .6);
+}
+.oldest-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bar-chart { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 .bar-row { display: flex; align-items: center; gap: 10px; }
 .bar-label { width: 46px; font-size: 12px; color: var(--muted); text-align: right; flex: 0 0 auto; }
-.bar-track { flex: 1; background: var(--panel); border-radius: 999px; height: 14px; overflow: hidden; }
+.bar-track { flex: 1; background: var(--panel2); border-radius: 999px; height: 14px; overflow: hidden; }
 .bar-fill { height: 100%; background: var(--accent); border-radius: 999px; min-width: 2px; }
-.bar-fill.alt { background: var(--muted); }
-.bar-value { width: 42px; font-size: 12px; color: var(--muted); flex: 0 0 auto; }
+.bar-value { width: 42px; font-size: 12px; font-weight: 600; flex: 0 0 auto; }
+.dec-chart { margin-top: auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; align-items: end; }
+.dec-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dec-n { font-size: 12px; font-weight: 600; }
+.dec-bar { width: 100%; border-radius: 6px; background: var(--muted); }
+.dec-l { font-size: 12px; color: var(--muted); }
+
+@media (max-width: 1100px) {
+  .bento {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-areas:
+      "hero hero albums songs"
+      "hero hero artists days"
+      "top top busy busy"
+      "top top oldest oldest"
+      "first first first first"
+      "years years dec dec";
+  }
+}
 
 .kind-tag { display: inline-block; color: var(--accent); margin-right: 5px; font-size: 12px; }
-
-/* ---- Sync widget (topbar) ---- */
-.sync-widget { display: flex; align-items: center; gap: 8px; background: var(--panel); border-radius: 999px; padding: 4px 12px; }
-.sync-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
-.sync-label { font-size: 12px; color: var(--text); white-space: nowrap; }
-.sync-mini { background: none; border: none; color: var(--muted); font-size: 12px; padding: 0 2px; cursor: pointer; transition: color .15s; }
-.sync-mini:hover { color: var(--accent); }
 
 /* ---- Empty state ---- */
 .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--muted); }
@@ -681,12 +929,18 @@ html.app-ready .side {
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; border: 2px solid var(--bg); }
 ::-webkit-scrollbar-thumb:hover { background: var(--faint); }
 
-/* The desktop tab labels stop fitting beside the logo and the options well
-   before the phone layout takes over: icons alone, the label kept for screen
-   readers (and as a tooltip). */
-@media (max-width: 1180px) {
-  .vbtn span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  .vbtn { padding: 9px 11px; }
+/* A narrower computer: the rail keeps its icons, the names stay for screen
+   readers (and the tooltip of each button's label). */
+@media (max-width: 1080px) and (min-width: 769px) {
+  .rail { width: 76px; flex-basis: 76px; padding: 18px 12px 12px; align-items: center; }
+  .rail .logo { padding: 0 0 18px; font-size: 0; gap: 0; }
+  .rail-btn { width: 48px; padding: 0; justify-content: center; }
+  .rail-btn span, .rail .needle-label {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+  }
+  .rail .needle-btn { width: 48px; padding: 0; }
+  .account-rail .account-text, .account-rail .account-chev { display: none; }
+  .account-rail .account-btn { width: auto; padding: 5px; border-radius: 50%; }
 }
 
 @media (max-width: 820px) {
@@ -694,94 +948,80 @@ html.app-ready .side {
   .cal-head .month-label { font-size: 22px; }
 }
 
-/* ---- Mobile: single-row topbar + bottom tab bar ---- */
+/* ---- Phone: header + filter row on top, tab bar below ---- */
 @media (max-width: 768px) {
-  /* Keep the topbar to one short line: filters toggle, logo, gear. */
-  .topbar { gap: 8px; padding: 10px 12px; }
-  .topbar .logo { font-size: 20px; }
+  .rail { display: none; }
+  .phone-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px 0; }
+  .phone-head .logo { font-size: 20px; }
+  .phone-head .needle-btn { width: 44px; height: 44px; min-height: 44px; }
+  .needle-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .account-avatar .account-btn { width: 44px; height: 44px; padding: 3px; border-radius: 50%; background: transparent; }
 
-  /* View tabs move to the bottom of the screen. */
-  .viewswitch { display: none; }
+  /* Menus become sheets from the bottom, over a scrim. */
+  .account-scrim, .fmenu-scrim {
+    display: block; position: fixed; inset: 0; z-index: 79;
+    background: rgba(0 0 0 / .45); border: none; padding: 0; animation: fade .2s ease;
+  }
+  .account-menu, .fmenu-pop {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 80; width: auto;
+    border-radius: 26px 26px 0 0; max-height: 88dvh; overflow-y: auto;
+    padding: 8px 14px calc(18px + env(safe-area-inset-bottom));
+    animation: sheetup .24s var(--ease);
+  }
+  .fmenu-pop { padding-top: 16px; }
+  .fmenu-pop .checklist { max-height: 50dvh; }
+  .sheet-grip { display: block; align-self: center; width: 40px; height: 5px; border-radius: 999px; background: var(--line); margin-bottom: 4px; }
+  .am-item { height: 48px; font-size: 15px; }
 
-  /* The options button reveals the sync/count/logout options in a dropdown. */
-  .btn.settings-btn { display: inline-flex; }
-  .topbar-actions {
-    display: none;
-    position: absolute; top: calc(100% + 6px); right: 12px; z-index: 70;
-    flex-direction: column; align-items: stretch; gap: 10px;
-    background: var(--panel); border-radius: 20px;
-    padding: 14px; min-width: 220px;
-    box-shadow: 0 18px 40px -18px rgba(var(--shadow) / .6);
-  }
-  .topbar-actions.open {
-    display: flex;
-    transform-origin: top right;
-    animation: menupop .18s var(--ease);
-  }
-  /* Uniform, full-width controls inside the dropdown (counter stays first). */
-  .topbar-actions .stat,
-  .topbar-actions .sync-widget,
-  .topbar-actions .btn {
-    width: 100%; height: 44px;
-  }
-  .topbar-actions .stat { justify-content: space-between; }
-  .topbar-actions .sync-widget { justify-content: flex-start; background: var(--panel2); }
-  .topbar-actions .sync-mini { margin-left: auto; }
-  .topbar-actions .btn { justify-content: center; }
-  .topbar-actions .version { text-align: center; }
-
-  /* The filter panel is a drawer over the calendar, not a column beside it:
-     inline, its 300px left the calendar ~60px on a 390px phone. It opens from
-     the filters button only (`drawer-open`, CalendarApp) and starts closed on
-     every load, whatever the URL's desktop `panel` flag says — so the head
-     script's pre-hydration attribute has nothing to do here either. */
-  .side, .side.collapsed, html[data-panel-collapsed] .side {
-    position: absolute; top: 0; bottom: 0; left: 0; z-index: 65; /* over the mini-player (60) */
-    width: min(320px, 88vw); flex-basis: auto; border-radius: 0 24px 24px 0;
-    box-shadow: 18px 0 40px -24px rgba(var(--shadow) / .7);
-    transform: translateX(-102%); visibility: hidden;
-    transition: transform .24s var(--ease), visibility 0s linear .24s;
-  }
-  .side.drawer-open {
-    transform: none; visibility: visible;
-    transition: transform .24s var(--ease);
-  }
-  .side-inner { width: 100%; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
-  .side-scrim {
-    display: block; position: absolute; inset: 0; z-index: 64;
-    background: rgba(0 0 0 / .45); border: none; padding: 0;
-    animation: fade .2s ease;
-  }
+  /* The filters stay one row, scrolled sideways. */
+  .filterbar { flex-wrap: nowrap; overflow-x: auto; padding: 10px 12px 4px; scrollbar-width: none; }
+  .filterbar::-webkit-scrollbar { display: none; }
+  .fsearch { flex: 0 0 170px; }
+  .seg-n { display: none; }
+  .filterbar .stat { margin-left: 0; }
+  .fmenu { position: static; }
 
   /* Header: ‹ label › on the first line, the month picker, Latest and the
-     needle on the next — side by side they ran past the right edge. */
+     month's layout on the next — side by side they ran past the right edge. */
   .cal-head { flex-wrap: wrap; row-gap: 10px; gap: 8px; margin-bottom: 12px; }
   .cal-head .month-label { flex: 1 1 calc(100% - 100px); font-size: 22px; text-align: center; }
   .cal-head .spacer { display: none; }
-  .cal-head select { flex: 1 1 auto; min-width: 0; }
-  /* The needle keeps its icon only, beside Latest, so the header stays two lines. */
-  .needle-btn { width: 40px; padding: 0; flex: 0 0 auto; }
-  .needle-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .cal-head select { flex: 1 1 70px; min-width: 0; }
+  .order-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .order-btn { width: 40px; padding: 0; }
 
-  /* Month cells are ~48px wide here: the count shares the top line with the
-     day number, clear of the covers, and the fan closes to two smaller covers
-     so it stays inside the cell. */
+  /* Month grid: ~48px cells, the number and the count in two corners, the
+     extra covers left to the day itself. Below ~52px a row cannot hold a
+     number over a cover: on a short screen the month scrolls instead. */
   .grid, .weekdays { gap: 4px; }
-  /* Below ~52px a row cannot hold a number over a cover: on a short screen
-     (Safari's toolbars showing) the month scrolls instead of crushing them. */
   .grid { grid-auto-rows: minmax(52px, 1fr); overflow-y: auto; }
   .weekdays div { padding-left: 4px; font-size: 10px; }
-  .day { padding: 4px 5px; border-radius: 12px; }
-  .day .dnum { font-size: 12px; }
-  .day .count { top: 5px; right: 5px; font-size: 10px; }
-  .covers img { width: 23px; height: 23px; border-radius: 4px; }
-  .covers img:nth-child(3) { display: none; }
+  .day { border-radius: 10px; }
+  .day .dnum { left: 3px; top: 3px; min-width: 18px; height: 18px; padding: 0 4px; font-size: 10px; }
+  .day .count { top: auto; right: 3px; bottom: 3px; height: 16px; padding: 0 5px; font-size: 9px; }
+  .day-more { display: none; }
 
-  /* Seven columns of 48px cannot hold a list: the week stacks into days. */
-  .week-grid { grid-template-columns: 1fr; overflow-y: auto; align-content: start; }
-  .week-col { overflow: visible; }
-  .week-col-body { overflow: visible; }
-  .week-empty { margin: 6px 0; font-size: 14px; }
+  /* Wall: a header line per day, its covers three abreast. */
+  .wall { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .wall-date {
+    grid-column: 1 / -1; aspect-ratio: auto; contain-intrinsic-size: auto 44px;
+    flex-direction: row; align-items: baseline; justify-content: flex-start; gap: 8px;
+    padding: 10px 4px 2px; background: transparent;
+  }
+  .wall-date:hover { background: transparent; }
+  .wall-n { order: -1; font-size: 26px; }
+  .wall-wd { font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--text); font-weight: 600; }
+  .wall-count { margin-left: auto; }
+  .wall-cover { border-radius: 10px; }
+  .wall-caption { display: none; }
+  .wall-hint { font-size: 13px; flex-wrap: wrap; }
+
+  /* Week: the days stack, the lead cover beside its list. */
+  .week-grid { grid-template-columns: 1fr; gap: 18px; }
+  .week-body { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 6px 12px; align-items: start; }
+  .wk-lead { grid-row: 1 / span 6; }
+  .week-item { grid-column: 2; }
+  .week-empty { aspect-ratio: auto; padding: 12px; }
 
   .day-hero { gap: 18px; margin-bottom: 18px; }
   .sleeve { width: 186px; height: 136px; }
@@ -795,6 +1035,16 @@ html.app-ready .side {
 
   .year-disc { gap: 18px; }
   .disc-months { min-width: 0; flex-basis: 100%; }
+
+  .bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(104px, auto); gap: 10px;
+    grid-template-areas:
+      "hero hero" "albums songs" "artists days" "oldest oldest" "top top"
+      "busy busy" "first first" "years years" "dec dec";
+  }
+  .t-hero { min-height: 220px; }
+  .tile { padding: 14px 16px; border-radius: 20px; }
+  .oldest-cover { width: 80px; height: 80px; }
 
   /* Bottom tab bar — one tab per view, an icon over its name, lifted clear of
      the home indicator (and of the rounded corners in landscape) once
@@ -833,7 +1083,10 @@ html.app-ready .side {
   /* Reserve scroll room so content is never hidden behind the floating player.
      The tab bar is in the flow, below .view-body, so its inset is not counted here. */
   .view-body { padding-bottom: 84px; }
+  .wall-view, .week-grid, .stats-view { padding-bottom: 0; }
 }
+
+@keyframes sheetup { from { transform: translateY(100%); } }
 
 /* Touch screens: iOS zooms the page into any field under 16px when it takes
    focus, and never zooms back out. */
@@ -842,10 +1095,11 @@ html.app-ready .side {
 }
 
 /* Everything that moves stops when the system asks for less motion: the
-   turning record, the fanned covers, the queue feedback. */
+   turning record, the growing covers, the menus, the queue feedback. */
 @media (prefers-reduced-motion: reduce) {
   .mp-disc { animation: none; }
-  .covers img, .day.has:hover .covers img { transition: none; transform: translateX(var(--fan-x, 0)) rotate(var(--fan-r, 0deg)); }
+  .wall-cover img, .wall-cover:hover img, .wk-art img, .wk-art:hover img { transition: none; transform: none; }
+  .day-peek, .account-menu, .fmenu-pop { animation: none; }
   .alrow-queue[data-status], .dv-queue[data-status] { animation: none; }
   .day.has:hover { transform: none; }
 }

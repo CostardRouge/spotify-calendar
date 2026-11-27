@@ -127,3 +127,25 @@ export function activeCooldown(
   const until = Math.max(persistedUntil ?? 0, serverUntil ?? 0);
   return until > now ? until : null;
 }
+
+/**
+ * The sync's state in a few words, for the account menu and the /sync page:
+ * where a running sync is ("Albums 40/87"), or how the last one ended.
+ */
+export function phaseLabel(job: SyncJob): string {
+  switch (job.status) {
+    case "running": {
+      if (job.phase === "albums") return `Albums ${job.albums.loaded}/${job.albums.total ?? "…"}`;
+      if (job.phase === "tracks") return `Songs ${job.tracks.loaded}/${job.tracks.total ?? "…"}`;
+      return "Syncing…";
+    }
+    case "paused":
+      return "Paused";
+    case "error":
+      return "Sync error";
+    case "done":
+      return "Synced";
+    default:
+      return "Not synced";
+  }
+}

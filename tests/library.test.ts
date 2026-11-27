@@ -7,6 +7,7 @@ import {
   emptyFilters,
   filterAlbums,
   groupByDay,
+  monthDays,
   randomDay,
   yearAgo,
 } from "../lib/library.ts";
@@ -179,3 +180,61 @@ describe("a year ago", () => {
     assert.equal(yearAgo(lib, "2026-01-01")?.dateKey, "2024-12-30");
   });
 });
+
+describe("monthDays", () => {
+  const lib = [
+    item("b", "2026-07-15T20:00:00Z"),
+    item("a", "2026-07-15T08:00:00Z"),
+    item("c", "2026-07-01T10:00:00Z"),
+    item("x", "2026-06-30T10:00:00Z"),
+    item("y", "2025-07-02T10:00:00Z"),
+  ];
+
+  it("keeps the month's days only, from the 1st, each in saving order", () => {
+    const days = monthDays(lib, 2026, 6);
+    assert.deepEqual(
+      days.map((d) => [d.dateKey, d.items.map((i) => i.id)]),
+      [
+        ["2026-07-01", ["c"]],
+        ["2026-07-15", ["a", "b"]],
+      ],
+    );
+  });
+
+  it("runs from the last day when asked, the covers still in saving order", () => {
+    const days = monthDays(lib, 2026, 6, "desc");
+    assert.deepEqual(days.map((d) => d.dateKey), ["2026-07-15", "2026-07-01"]);
+    assert.deepEqual(days[0].items.map((i) => i.id), ["a", "b"]);
+  });
+
+  it("is empty for a month without saves", () => {
+    assert.deepEqual(monthDays(lib, 2026, 7), []);
+  });
+});
+
+describe("computeStats, the bento's extra tiles", () => {
+  const lib = [
+    item("old", "2026-01-02T10:00:00Z", { year: 1977, cover: "rumours" }),
+    item("tie", "2026-03-02T10:00:00Z", { year: 1977, cover: "later" }),
+    item("n1", "2026-01-02T12:00:00Z", { year: 2020, cover: "one-early" }),
+    item("n2", "2026-02-05T12:00:00Z", { year: 2021, cover: "one-late", artists: [{ id: "a1", name: "Artist One" }] }),
+    item("t1", "2026-02-06T12:00:00Z", { year: null, cover: "", artists: [{ id: "a2", name: "Artist Two" }] }),
+  ];
+  const s = computeStats(lib);
+
+  it("counts the days that hold saves", () => {
+    assert.equal(s.activeDays, 4);
+  });
+
+  it("finds the oldest record, the earliest saved on a tie, skipping unknown years", () => {
+    assert.equal(s.oldest?.id, "old");
+  });
+
+  it("ranks the top artists with the cover of their latest save that has one", () => {
+    assert.deepEqual(s.topArtists, [
+      { id: "a1", name: "Artist One", count: 4, cover: "later" },
+      { id: "a2", name: "Artist Two", count: 1, cover: "" },
+    ]);
+  });
+});
+

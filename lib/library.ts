@@ -108,6 +108,28 @@ export function artistIndex(albums: Album[]): ArtistEntry[] {
   return Object.values(idx).sort((a, b) => b.count - a.count);
 }
 
+/**
+ * The days of one month that hold saves, for the wall (components/WallView):
+ * each with its items in the order they were saved. `order` "asc" runs from
+ * the 1st like a calendar — the default, so nobody has to learn which end the
+ * wall starts from; "desc" puts the latest day first. `month` is 0-based.
+ */
+export function monthDays(
+  albums: Album[],
+  year: number,
+  month: number,
+  order: "asc" | "desc" = "asc",
+): { dateKey: string; items: Album[] }[] {
+  const prefix = `${year}-${String(month + 1).padStart(2, "0")}-`;
+  const byDay = groupByDay(albums.filter((a) => a.dateKey.startsWith(prefix)));
+  const keys = Object.keys(byDay).sort();
+  if (order === "desc") keys.reverse();
+  return keys.map((dateKey) => ({
+    dateKey,
+    items: [...byDay[dateKey]].sort((a, b) => +new Date(a.addedAt) - +new Date(b.addedAt)),
+  }));
+}
+
 /** [year, monthIndex] pairs that contain saves, newest first. */
 export function activeMonths(albums: Album[]): [number, number][] {
   const set = new Set<string>();
@@ -131,6 +153,12 @@ export interface LibraryStats {
   totalTracks: number;
   uniqueArtists: number;
   topArtist: { name: string; count: number } | null;
+  /** The five most saved artists, each with the cover of its latest save. */
+  topArtists: { id: string; name: string; count: number; cover: string }[];
+  /** How many distinct days hold at least one save. */
+  activeDays: number;
+  /** The item with the earliest release year (the earliest saved on a tie). */
+  oldest: Album | null;
   firstSave: string | null; // dateKey
   lastSave: string | null; // dateKey
   busiestDay: { dateKey: string; count: number } | null;
@@ -172,6 +200,18 @@ export function computeStats(items: Album[]): LibraryStats {
     .map(([decade, count]) => ({ decade, count }))
     .sort((a, b) => parseInt(a.decade) - parseInt(b.decade));
 
+  // Walking the saves oldest first leaves each artist's latest cover in place.
+  const latestCover: Record<string, string> = {};
+  for (const al of sortedByAdded) for (const a of al.artists) if (al.cover) latestCover[a.id] = al.cover;
+  const topArtists = artists
+    .slice(0, 5)
+    .map((a) => ({ id: a.id, name: a.name, count: a.count, cover: latestCover[a.id] ?? "" }));
+
+  let oldest: Album | null = null;
+  for (const al of sortedByAdded) {
+    if (al.year != null && (oldest?.year == null || al.year < oldest.year)) oldest = al;
+  }
+
   return {
     totalAlbums: items.filter((i) => i.kind === "album").length,
     totalTracks: items.filter((i) => i.kind === "track").length,
@@ -179,6 +219,9 @@ export function computeStats(items: Album[]): LibraryStats {
     topArtist: artists[0]
       ? { name: artists[0].name, count: artists[0].count }
       : null,
+    topArtists,
+    activeDays: Object.keys(byDay).length,
+    oldest,
     firstSave: sortedByAdded[0]?.dateKey ?? null,
     lastSave: sortedByAdded[sortedByAdded.length - 1]?.dateKey ?? null,
     busiestDay: busiest,

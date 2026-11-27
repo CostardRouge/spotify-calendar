@@ -11,6 +11,20 @@ history's turning points.
 
 ### Added
 
+- The month opens as a **wall of covers**: each day that holds saves is an orange-numbered tile followed by its
+  covers at full size. The days run from the 1st; a button beside the layout switch runs them from the last day
+  instead. A short note explains the wall the first time, until you dismiss it.
+- **Wall | Grid** switches the month between the wall and a classic calendar, where the day's first cover now fills
+  its square. On a computer, hovering a day shows all its covers beside it. This device remembers your layout and
+  order.
+- An **account menu** gathers what was spread across the top bar: who is signed in, how many saves you have and
+  how the sync is going (with its details page), the theme, the version and what's new, the code on GitHub, and
+  logging out. It opens from the foot of the side rail on a computer, and as a sheet from the bottom on a phone.
+- **Choose the theme**: Auto (your device's setting), Night or Day, from the account menu, remembered on this
+  device.
+- Stats show how many days hold saves, your oldest record with its cover, and your five most saved artists with
+  theirs.
+
 - The Year view draws your year as a record: one groove per month, January at the label and December at the rim,
   one dot per day you saved music, bigger on busy days. Tap a dot to open the day, or a month in the list beside it.
 - "Drop the needle" opens a random day from your library (within your filters), to dig back into what you saved.
@@ -26,14 +40,22 @@ history's turning points.
   data. Its legal notice says what is counted, and a visitor can decline — Do Not Track, Global Privacy Control, or
   the switch on the notice. The app itself counts nothing.
 
-- On a phone, the filters open as a drawer over the calendar instead of squeezing it into a sliver, and close with
-  a tap beside them or on a view tab.
 - Installed to a home screen, the app now shows a "Cannot reach Sillon" page when the server cannot be
   reached, instead of a blank screen; the library saved on the device is untouched.
 - Long-press shortcuts on the installed app's icon: Month, Week, Year and Stats.
 - The showcase page describes the app to search engines in a structured form.
 
 ### Changed
+
+- The views (Month, Week, Day, Year, Journal, Stats) now sit in a side rail on a computer, with "Drop the needle"
+  and your account. The filters are a bar that is always in view above them: All / Albums / Songs, the search, and
+  the Artist and Released menus. On a phone the views stay in the tab bar and the filters become a row you can
+  scroll; their menus open from the bottom.
+- The week shows each day's first save as a big cover you can play, the others listed beneath.
+- Stats are laid out as tiles sized to what they hold, so a long artist name or a date is no longer cut.
+- The Year record shows the days of the selected month as their covers on its groove; the other months stay
+  quiet dots.
+- Links and "clear" buttons are no longer underlined.
 
 - The app has a name: **Sillon** — the groove of a record. A new look comes with it: a warm night theme by default
   (a day theme when your device is in light mode), one vivid orange, rounded surfaces, and the Unbounded and Inter
@@ -61,6 +83,7 @@ history's turning points.
 
 ### Removed
 
+- Folding the filter column away: the filters are always in view now. Old links that folded it still open.
 - The genre filter and the genre figures in Stats. Spotify withholds genres from apps like this one, so they were
   always empty; the server also deletes the thousands of empty genre files it had stored.
 

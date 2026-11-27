@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     // profile call fails, /api/me resolves and cookies the id later.
     try {
       const me = await getMe(tokens.access_token);
-      if (me.id) writeUserIdCookie(res, me.id);
+      if (me.id) writeUserIdCookie(res, me.id, me.displayName);
     } catch {
       // non-fatal
     }

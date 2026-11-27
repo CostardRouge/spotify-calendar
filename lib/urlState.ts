@@ -10,7 +10,6 @@ const isDateKey = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
 export interface UrlState {
   anchorKey: string | null; // YYYY-MM-DD; null for views without navigation
   filters: Filters;
-  collapsed: boolean;
 }
 
 /** Serialize state into query params, omitting anything at its default. */
@@ -26,7 +25,6 @@ export function stateToSearch(s: UrlState): string {
   // kinds defaults to both; only serialize when narrowed.
   if (f.kinds.size && f.kinds.size !== KINDS.length)
     p.set("kinds", [...f.kinds].join(","));
-  if (s.collapsed) p.set("panel", "0");
 
   return p.toString();
 }
@@ -64,7 +62,8 @@ export function searchToState(search: string): Partial<UrlState> {
   }
 
   if (touched) out.filters = f;
-  if (p.get("panel") === "0") out.collapsed = true;
+  // `panel=0` (the folded filter column, gone since the filters became a bar
+  // above the views) is ignored: old links still open, just without it.
 
   return out;
 }

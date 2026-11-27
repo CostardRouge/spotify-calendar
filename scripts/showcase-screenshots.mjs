@@ -20,14 +20,20 @@ mkdirSync(OUT, { recursive: true });
 
 const log = (m) => console.log(`[screenshots] ${m}`);
 
-/** Wait until every visible <img> on the page has finished loading. */
+/**
+ * Wait until every <img> in view has finished loading. Images out of view are
+ * skipped: lazy covers below the fold and the grid's hover cards (not
+ * displayed) never load until they are needed.
+ */
 async function settleImages(page, timeout = 30_000) {
   await page
     .waitForFunction(
       () =>
-        [...document.querySelectorAll("img")].every(
-          (i) => i.complete || i.style.display === "none",
-        ),
+        [...document.querySelectorAll("img")].every((i) => {
+          const r = i.getBoundingClientRect();
+          const inView = r.width > 0 && r.bottom > 0 && r.top < innerHeight;
+          return i.complete || i.style.display === "none" || !inView;
+        }),
       { timeout },
     )
     .catch(() => log("some images never settled — capturing anyway"));
@@ -63,7 +69,7 @@ async function maybeFakeCovers(page) {
 async function assertCoversLoaded(page) {
   const loaded = await page.evaluate(
     () =>
-      [...document.querySelectorAll(".covers img")].filter(
+      [...document.querySelectorAll(".wall-cover img, .day-art img")].filter(
         (i) => i.complete && i.naturalWidth > 0,
       ).length,
   );
@@ -94,10 +100,30 @@ await maybeFakeCovers(page);
 await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await shoot(page, "login");
 
-// 2. Kick off the demo sync from the empty state, wait until the grid fills.
+/**
+ * Starts the demo sync from the empty state. A server that already holds the
+ * demo library (a second local run) opens straight on it, with no button.
+ */
+async function startSync(p) {
+  const btn = p.getByRole("button", { name: /start sync/i });
+  await Promise.race([
+    btn.waitFor({ timeout: 15_000 }),
+    p.waitForSelector(".wall-cover img, .day-art img", { state: "attached", timeout: 15_000 }),
+  ]).catch(() => {});
+  if (await btn.count()) await btn.first().click();
+}
+
+/** The wall explains itself once; the showcase shows it as a returning reader sees it. */
+async function dismissWallHint(p) {
+  const got = p.getByRole("button", { name: "Got it" });
+  if (await got.count()) await got.click();
+}
+
+// 2. Kick off the demo sync from the empty state, wait until the wall (the
+// month's default layout) fills.
 await page.goto(`${BASE}/month`, { waitUntil: "networkidle" });
-await page.getByRole("button", { name: /start sync/i }).click();
-await page.waitForSelector(".day.has .covers img", { state: "attached", timeout: 60_000 });
+await startSync(page);
+await page.waitForSelector(".wall-cover img", { state: "attached", timeout: 60_000 });
 // Sync writes items incrementally; wait for the item counter to stabilise.
 await page.waitForFunction(
   () => {
@@ -111,12 +137,16 @@ await page.waitForFunction(
   },
   { timeout: 60_000, polling: 500 },
 );
+await dismissWallHint(page);
 await settleImages(page);
 await assertCoversLoaded(page);
 await shoot(page, "month");
 
-// 3. Day modal — open the busiest day of the visible month. The count reads
-// "×5" and a single save shows none, hence the digits-only parse.
+// 3. Day modal — from the calendar grid, open the busiest day of the visible
+// month. The count reads "×5" and a single save shows none, hence the
+// digits-only parse.
+await page.getByRole("radio", { name: "Grid" }).click();
+await page.waitForSelector(".day.has .day-art img", { state: "attached", timeout: 30_000 });
 const busiest = await page.evaluateHandle(() => {
   const count = (el) => +((el.querySelector(".count")?.textContent ?? "1").replace(/\D/g, "") || 1);
   const days = [...document.querySelectorAll(".day.has")];
@@ -142,13 +172,11 @@ await page.goto(`${BASE}/stats`, { waitUntil: "networkidle" });
 await page.waitForTimeout(800);
 await shoot(page, "stats");
 
-// 7. Filters in action — tick the most saved artist in the panel.
+// 7. Filters in action — open the artist menu and tick the most saved one.
 await page.goto(`${BASE}/month`, { waitUntil: "networkidle" });
-await page.waitForSelector(".day.has .covers img", { state: "attached", timeout: 30_000 });
-const artistBox = page
-  .locator(".filter-group", { hasText: "Artist" })
-  .locator(".checkrow input")
-  .first();
+await page.waitForSelector(".day.has .day-art img", { state: "attached", timeout: 30_000 });
+await page.locator(".fchip", { hasText: "Artist" }).click();
+const artistBox = page.locator(".fmenu-pop .checkrow input").first();
 if (await artistBox.count()) await artistBox.check({ force: true });
 await page.waitForTimeout(600);
 await shoot(page, "filters");
@@ -164,19 +192,12 @@ const mobile = await browser.newPage({
   timezoneId: "Europe/Paris",
 });
 await maybeFakeCovers(mobile);
-// panel=0 collapses the filter panel, which overlays the grid at phone widths.
-await mobile.goto(`${BASE}/month?panel=0`, { waitUntil: "networkidle" });
+await mobile.goto(`${BASE}/month`, { waitUntil: "networkidle" });
 // Fresh context — sync again (fast: fixtures, no network pacing beyond 250ms/page).
-// The filter panel can overlay the empty state at phone widths — dispatch the
-// click on the DOM node directly instead of through the pointer.
-await mobile.evaluate(() => {
-  const btn = [...document.querySelectorAll(".empty-state button")].find((b) =>
-    /start sync/i.test(b.textContent ?? ""),
-  );
-  btn?.click();
-});
-await mobile.waitForSelector(".day.has .covers img", { state: "attached", timeout: 60_000 });
+await startSync(mobile);
+await mobile.waitForSelector(".wall-cover img", { state: "attached", timeout: 60_000 });
 await mobile.waitForTimeout(1500);
+await dismissWallHint(mobile);
 await settleImages(mobile);
 await mobile.screenshot({ path: join(OUT, "mobile-month.png") });
 log("captured mobile-month.png");

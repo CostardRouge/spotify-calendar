@@ -6,7 +6,7 @@ Read before touching routing, the `app/` ↔ `lib/` ↔ `components/` split, aut
 
 `app/page.tsx` redirects `/` to `/month`; `app/[view]/page.tsx` accepts exactly `month | week | day | year | list | stats` and 404s on anything else. It calls `generateStaticParams()` so each view gets a pre-rendered static shell and the app opens straight into the right view with no flash of another one. Decided in `afeca9a` ("cleaner URLs and server-side static rendering"). **Revised 2026-11-26**: the root layout's `generateMetadata` reads the request headers (absolute `og:image`, `deployment.md`), so every view now renders per request (`ƒ` in the build) instead of from a build-time shell. The path still names the view, so it still opens with no flash of another one; the cost is one cheap server render per page load. `generateStaticParams` stays as the list of valid views. **How to apply**: adding a view means adding it to *both* `VIEWS` in `app/[view]/page.tsx` and `ViewMode` in `lib/dates.ts` — they are two hand-kept lists of the same set.
 
-Everything else that is user-visible state (anchor date, filters, panel collapsed) is serialised into the *query string* by `lib/urlState.ts`, which omits any value sitting at its default. Keep that property: it is what makes shared links short and the back button meaningful.
+Everything else that is user-visible state (anchor date, filters) is serialised into the *query string* by `lib/urlState.ts`, which omits any value sitting at its default. Keep that property: it is what makes shared links short and the back button meaningful.
 
 ## Server holds the secrets, client holds the library (2026-08-20)
 

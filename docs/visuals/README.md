@@ -55,11 +55,6 @@ theme preference. The month and day are July 2026, the demo library's latest.
 | `app-year-day-phone@2x.png` | Same, day palette | 780 × 1688 |
 | `app-social-card-month-grid-night-1200x630@2x.png` | Social-card frame (1200 × 630, the og:image ratio) of the month in Grid at night | 2400 × 1260 |
 
-Known flaw: about 10 of the demo library's 113 cover URLs now answer 404 on
-Apple's art CDN, so a few tiles show an empty square (most visibly the third
-cover of 1 July and the second of 6 July on the wall). Regenerating the fixtures
-(`node scripts/build-demo-library.mjs`) and re-running the capture fixes it.
-
 ## Mockups (design canvas)
 
 From the canvas's "Itération 3 — synthèse" page (the reference the app was built

@@ -1,12 +1,12 @@
-# spotify-calendar
+# Sillon
 
-> A self-hosted Next.js app that lays your saved Spotify albums and liked songs on a calendar, grouped by the day you added them.
+> A self-hosted Next.js app that lays your saved Spotify albums and liked songs on a calendar, grouped by the day you added them. Its repository is named spotify-calendar.
 
-Each day of the calendar shows the covers saved that day; the library can be read by month, week, year, list or stats, filtered by search, release year, artist and genre, and played on your Spotify devices. Authentication runs server-side (Authorization Code flow): Spotify tokens live in httpOnly cookies and never reach the browser. It is self-hosted — a Docker image on your own machine (`make up` for development, `make prod-deploy` for the standalone image), with your own Spotify app's credentials — and a deployment can be shared, every stored piece of data being keyed by the Spotify account that produced it. `DEMO_MODE=1` runs it over a fixture library with no Spotify account. Free software under the MIT licence; not affiliated with Spotify.
+Each day of the calendar shows the covers saved that day; the library can be read by month, week or day, as a year drawn like a record (one groove per month, one dot per day with saves), as a journal or as stats; a "drop the needle" button opens a random day, and each day recalls what was saved around the same date a year before. It can be filtered by search, release year, artist and genre, and played on your Spotify devices. Authentication runs server-side (Authorization Code flow): Spotify tokens live in httpOnly cookies and never reach the browser. It is self-hosted — a Docker image on your own machine (`make up` for development, `make prod-deploy` for the standalone image), with your own Spotify app's credentials — and a deployment can be shared, every stored piece of data being keyed by the Spotify account that produced it. `DEMO_MODE=1` runs it over a fixture library with no Spotify account. Free software under the MIT licence; not affiliated with Spotify.
 
 ## Showcase
 
-- [spotify-calendar showcase](https://costardrouge.github.io/spotify-calendar/): the landing page, with screenshots of the real interface taken over a demo library of real releases with invented save dates
+- [Sillon showcase](https://costardrouge.github.io/spotify-calendar/): the landing page, with screenshots of the real interface taken over a demo library of real releases with invented save dates
 - [Legal notice](https://costardrouge.github.io/spotify-calendar/#legal): who publishes the showcase, who hosts it, and what it knows about a visitor (visits counted anonymously with a self-hosted Umami at insight.steevepommier.com, no cookie, declinable through Do Not Track, Global Privacy Control or a switch on the notice)
 
 ## Source

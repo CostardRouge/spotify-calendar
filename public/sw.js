@@ -1,5 +1,5 @@
 /*
- * spotify-calendar's service worker. One job: an offline page for navigations.
+ * Sillon's service worker. One job: an offline page for navigations.
  *
  * It deliberately caches nothing else. The library already lives on the device
  * (IndexedDB, per Spotify account), so caching the view shells and their
@@ -20,7 +20,7 @@
  *
  * Bump VERSION when offline.html changes, so the new copy replaces the old.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = `sc-offline-${VERSION}`;
 const OFFLINE_URL = new URL("offline.html", self.registration.scope).href;
 

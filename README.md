@@ -1,11 +1,13 @@
-# spotify-calendar
+# Sillon
 
 **[Showcase / screenshots →](https://costardrouge.github.io/spotify-calendar/)**
 
-A Next.js app that lays your **saved Spotify albums** on a monthly calendar,
-grouped by the day you added each one. Each day cell shows the album covers
-stacked, with a count badge; a collapsible side panel filters by **search,
-release year, artist, and genre**.
+**Sillon** (this repository: `spotify-calendar`) is a Next.js app that lays your
+**saved Spotify albums and liked songs** on a calendar, grouped by the day you
+added each one. Each day cell fans out the covers saved that day; the year is
+drawn as a record (one groove per month, one dot per day), "drop the needle"
+opens a random day, and each day recalls what you saved a year before. A side
+panel filters by **search, release year, artist, and genre**.
 
 Authentication runs **server-side** (Authorization Code flow) — your Spotify
 tokens live in httpOnly cookies and never reach the browser.

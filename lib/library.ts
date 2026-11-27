@@ -50,6 +50,51 @@ export function groupByDay(albums: Album[]): Record<string, Album[]> {
   return m;
 }
 
+/**
+ * "Drop the needle": one day that holds at least one of `albums`, picked at
+ * random — a way back into a library too long to scroll. Every day weighs the
+ * same, however many saves it holds, so a quiet Tuesday comes up as often as
+ * a binge. `rand` is injectable so the pick is testable. Null when empty.
+ */
+export function randomDay(albums: Album[], rand: () => number = Math.random): string | null {
+  const days = [...new Set(albums.map((a) => a.dateKey))].sort();
+  if (!days.length) return null;
+  return days[Math.min(days.length - 1, Math.floor(rand() * days.length))];
+}
+
+/** Shifts a YYYY-MM-DD key by `days`, in calendar days (UTC arithmetic, no DST). */
+function shiftKey(dateKey: string, days: number): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+/**
+ * "A year ago": the saves of the same day one year before `dateKey` — or, when
+ * that day is empty, of the nearest day within `window` days of it (the earlier
+ * one on a tie). A strict same-day match is rare in a personal library and an
+ * empty memory card is no memory at all, hence the window. 29 February looks
+ * back to 28 February. Null when nothing falls within the window.
+ */
+export function yearAgo(
+  albums: Album[],
+  dateKey: string,
+  window = 3,
+): { dateKey: string; items: Album[] } | null {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const lastYear = new Date(Date.UTC(y - 1, m - 1, d));
+  // Date.UTC rolls 29 Feb of a leap year into 1 March of the year before.
+  if (lastYear.getUTCMonth() !== m - 1) lastYear.setUTCDate(0);
+  const target = lastYear.toISOString().slice(0, 10);
+  const byDay = groupByDay(albums);
+  for (let off = 0; off <= window; off++) {
+    for (const k of off === 0 ? [target] : [shiftKey(target, -off), shiftKey(target, off)]) {
+      const items = byDay[k];
+      if (items?.length) return { dateKey: k, items };
+    }
+  }
+  return null;
+}
+
 export interface ArtistEntry {
   id: string;
   name: string;

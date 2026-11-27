@@ -95,7 +95,7 @@ describe("the showcase page", () => {
     const data = JSON.parse(JSON_LD.exec(html)?.[1] ?? "{}");
     assert.equal(data["@context"], "https://schema.org");
     assert.equal(data["@type"], "SoftwareApplication");
-    assert.equal(data.name, "spotify-calendar");
+    assert.equal(data.name, "Sillon");
     assert.equal(data.url, SITE);
     assert.equal(data.image, `${SITE}og-image.png`);
     assert.equal(data.author?.name, "Steeve Pommier", "the legal notice's publisher");
@@ -121,7 +121,7 @@ describe("the showcase's llms.txt", () => {
   const workflow = readFileSync(join(process.cwd(), ".github", "workflows", "pages.yml"), "utf8");
 
   it("follows the llmstxt.org shape: one H1, a summary, sections of links", () => {
-    assert.match(llms, /^# spotify-calendar\n\n> \S/);
+    assert.match(llms, /^# Sillon\n\n> \S/);
     assert.equal((llms.match(/^# /gm) ?? []).length, 1);
     assert.ok((llms.match(/^## /gm) ?? []).length >= 2);
   });

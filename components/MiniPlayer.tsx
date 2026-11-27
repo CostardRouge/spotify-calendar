@@ -201,19 +201,26 @@ export default function MiniPlayer() {
   const hasTrack = !!state?.track;
 
   return (
-    <div className="mini-player" data-empty={hasTrack ? undefined : "true"}>
+    <div
+      className="mini-player"
+      data-empty={hasTrack ? undefined : "true"}
+      data-playing={state?.isPlaying ? "true" : undefined}
+    >
       {hasTrack ? (
         <>
-          {state!.track!.cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              className="mp-cover"
-              src={state!.track!.cover}
-              alt={state!.track!.album}
-            />
-          ) : (
-            <div className="mp-cover mp-cover-empty" />
-          )}
+          {/* The cover as a record, turning while Spotify plays (app/globals.css). */}
+          <span className="mp-disc">
+            {state!.track!.cover ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                className="mp-cover"
+                src={state!.track!.cover}
+                alt={state!.track!.album}
+              />
+            ) : (
+              <span className="mp-cover mp-cover-empty" />
+            )}
+          </span>
           <div className="mp-meta">
             <div className="mp-title" title={state!.track!.name}>
               {state!.track!.name}

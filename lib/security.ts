@@ -15,10 +15,11 @@
 //     weighed); in development React also needs 'unsafe-eval' to rebuild
 //     server stacks in the browser (Next's own guide), never in production;
 //   - styles: this origin and the inline style attributes React writes;
-//   - images: this origin, data: (globals.css's grain) and Spotify's album-art
+//   - images: this origin, data: (inline images) and Spotify's album-art
 //     hosts, the same list next.config.ts hands to next/image — covers are
 //     plain <img> tags straight from those hosts;
-//   - fonts: this origin (the stacks are system fonts, nothing is fetched);
+//   - fonts: this origin (Unbounded and Inter are self-hosted by next/font
+//     from app/fonts, nothing is fetched from a font CDN);
 //   - connections: this origin — the browser only ever talks to /api/*,
 //     Spotify is called by the server; no form posts anywhere;
 //   - nothing framed, no plugins, no <base> rewriting.

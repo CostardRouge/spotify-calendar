@@ -3,12 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Album } from "@/lib/types";
-import { activeMonths, emptyFilters, filterAlbums, type Filters } from "@/lib/library";
+import { activeMonths, emptyFilters, filterAlbums, randomDay, type Filters } from "@/lib/library";
 import { stateToSearch, searchToState } from "@/lib/urlState";
 import {
   MONTHS,
   keyOf,
-  formatDay,
   startOfWeek,
   addDays,
   addMonths,
@@ -26,13 +25,15 @@ import StatsView from "@/components/StatsView";
 import FilterPanel from "@/components/FilterPanel";
 import DayModal from "@/components/DayModal";
 import MiniPlayer from "@/components/MiniPlayer";
+import Icon from "@/components/Icons";
 
 const VIEWS: { id: ViewMode; label: string }[] = [
   { id: "month", label: "Month" },
   { id: "week", label: "Week" },
   { id: "day", label: "Day" },
   { id: "year", label: "Year" },
-  { id: "list", label: "List" },
+  // The list reads as a journal now: the days, newest first, one under the other.
+  { id: "list", label: "Journal" },
   { id: "stats", label: "Stats" },
 ];
 
@@ -161,6 +162,34 @@ export default function CalendarApp({
   };
   const hasNav = view !== "list" && view !== "stats";
 
+  // "Drop the needle": open a random day that holds saves (within the current
+  // filters), in the day view.
+  const dropNeedle = () => {
+    const key = randomDay(filtered);
+    if (!key) return;
+    setAnchor(new Date(key + "T00:00:00"));
+    setView("day");
+    setDrawerOpen(false);
+  };
+
+  // On the day view a horizontal swipe turns the page: left for the next day,
+  // right for the previous. Only a clearly horizontal gesture counts, so a
+  // vertical scroll through a long day never skips one.
+  const touchRef = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchRef.current;
+    touchRef.current = null;
+    if (!start || view !== "day") return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) step(dx < 0 ? 1 : -1);
+  };
+
   const headerLabel = () => {
     switch (view) {
       case "month":
@@ -171,11 +200,17 @@ export default function CalendarApp({
         return `Week of ${s.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${e.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
       }
       case "day":
-        return formatDay(keyOf(anchor));
+        // Short names keep the title on one line on a phone.
+        return anchor.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
       case "year":
         return String(anchor.getFullYear());
       case "list":
-        return "All saved items";
+        return "Journal";
       case "stats":
         return "Library stats";
     }
@@ -194,13 +229,14 @@ export default function CalendarApp({
         <button
           className="btn icon"
           onClick={toggleFilters}
-          title="Toggle filters"
+          title="Filters"
+          aria-label="Filters"
           aria-controls="filters"
         >
-          ☰
+          <Icon name="filters" />
         </button>
         <div className="logo">
-          <span className="dot" /> spotify-calendar
+          <span className="mark" aria-hidden="true" /> sillon
         </div>
         <nav className="viewswitch">
           {VIEWS.map((v) => (
@@ -208,8 +244,11 @@ export default function CalendarApp({
               key={v.id}
               className={"vbtn" + (view === v.id ? " active" : "")}
               onClick={() => setView(v.id)}
+              title={v.label}
+              aria-current={view === v.id ? "page" : undefined}
             >
-              {v.label}
+              <Icon name={v.id} />
+              <span>{v.label}</span>
             </button>
           ))}
         </nav>
@@ -219,8 +258,9 @@ export default function CalendarApp({
           onClick={() => setSettingsOpen((o) => !o)}
           aria-expanded={settingsOpen}
           title="Options"
+          aria-label="Options"
         >
-          ⚙
+          <Icon name="options" />
         </button>
         <div className={"topbar-actions" + (settingsOpen ? " open" : "")}>
           <div className="stat">
@@ -231,7 +271,7 @@ export default function CalendarApp({
           <button className="btn" onClick={logout}>
             Log out
           </button>
-          <div className="version" title="spotify-calendar version">
+          <div className="version" title="Sillon version">
             v{version}
           </div>
         </div>
@@ -257,12 +297,12 @@ export default function CalendarApp({
           <div className="cal-head">
             {hasNav && (
               <>
-                <button className="btn icon" onClick={() => step(-1)}>
-                  ‹
+                <button className="btn icon" onClick={() => step(-1)} aria-label="Previous">
+                  <Icon name="prev" />
                 </button>
                 <div className="month-label">{mounted ? headerLabel() : ""}</div>
-                <button className="btn icon" onClick={() => step(1)}>
-                  ›
+                <button className="btn icon" onClick={() => step(1)} aria-label="Next">
+                  <Icon name="next" />
                 </button>
                 {mounted && (
                   <select
@@ -291,12 +331,24 @@ export default function CalendarApp({
             )}
             {!hasNav && <div className="month-label">{headerLabel()}</div>}
             <div className="spacer" />
+            {filtered.length > 0 && (
+              <button
+                className="btn ghost needle-btn"
+                onClick={dropNeedle}
+                title="Drop the needle: open a random day from your library"
+                aria-label="Drop the needle"
+              >
+                <Icon name="needle" />
+                <span className="needle-label">Drop the needle</span>
+              </button>
+            )}
           </div>
 
-          <div className="view-body">
+          <div className="view-body" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
             {showEmpty ? (
               <div className="empty-state">
-                <h2>No data yet</h2>
+                <span className="mark" aria-hidden="true" />
+                <h2>No records yet</h2>
                 <p>
                   {job.status === "error"
                     ? "The last sync ran into an error."
@@ -324,7 +376,13 @@ export default function CalendarApp({
                 {mounted && view === "week" && (
                   <WeekView albums={filtered} anchor={anchor} onSelectDay={setSelectedDay} />
                 )}
-                {mounted && view === "day" && <DayView albums={filtered} anchor={anchor} />}
+                {mounted && view === "day" && (
+                  <DayView
+                    albums={filtered}
+                    anchor={anchor}
+                    onGoToDay={(key) => setAnchor(new Date(key + "T00:00:00"))}
+                  />
+                )}
                 {mounted && view === "year" && (
                   <YearView
                     albums={filtered}
@@ -351,11 +409,13 @@ export default function CalendarApp({
           <button
             key={v.id}
             className={"bnav-btn" + (view === v.id ? " active" : "")}
+            aria-current={view === v.id ? "page" : undefined}
             onClick={() => {
               setView(v.id);
               setDrawerOpen(false);
             }}
           >
+            <Icon name={v.id} />
             {v.label}
           </button>
         ))}

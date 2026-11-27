@@ -17,13 +17,14 @@ function LoginInner() {
   return (
     <div className="center-screen">
       <div className="card">
-        <h1>
-          <span style={{ color: "var(--accent)" }}>●</span> spotify-calendar
-        </h1>
+        <span className="mark" aria-hidden="true" />
+        <h1>sillon</h1>
+        <p className="catch">Your records, day by day.</p>
         <p>
-          Browse your saved Spotify albums on a calendar, arranged by the day you
-          added them. Login is handled securely on the server — your tokens stay
-          in httpOnly cookies.
+          Your saved Spotify albums and liked songs, laid out by the day you saved
+          them: the year as a record, a random dig through your past, and what you
+          were saving a year ago. Sign-in runs on the server — your tokens stay in
+          httpOnly cookies.
         </p>
         {msg && <p className="err">{msg}</p>}
         <a className="btn primary" href="/api/auth/login">

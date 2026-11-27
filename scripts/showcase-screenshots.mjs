@@ -115,24 +115,21 @@ await settleImages(page);
 await assertCoversLoaded(page);
 await shoot(page, "month");
 
-// 3. Day modal — open the busiest day of the visible month.
+// 3. Day modal — open the busiest day of the visible month. The count reads
+// "×5" and a single save shows none, hence the digits-only parse.
 const busiest = await page.evaluateHandle(() => {
+  const count = (el) => +((el.querySelector(".count")?.textContent ?? "1").replace(/\D/g, "") || 1);
   const days = [...document.querySelectorAll(".day.has")];
-  return days.reduce((a, b) =>
-    +(a.querySelector(".count")?.textContent ?? 0) >=
-    +(b.querySelector(".count")?.textContent ?? 0)
-      ? a
-      : b,
-  );
+  return days.reduce((a, b) => (count(a) >= count(b) ? a : b));
 });
 await busiest.asElement().click();
 await page.waitForSelector(".modal, [class*=modal]", { timeout: 10_000 });
 await shoot(page, "day-modal");
 await page.keyboard.press("Escape");
 
-// 4. Year view.
+// 4. Year view — the record: no covers, the dots are what to wait for.
 await page.goto(`${BASE}/year`, { waitUntil: "networkidle" });
-await page.waitForSelector("img", { state: "attached", timeout: 30_000 });
+await page.waitForSelector(".disc .dot", { state: "attached", timeout: 30_000 });
 await shoot(page, "year");
 
 // 5. List view.

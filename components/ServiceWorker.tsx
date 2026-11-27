@@ -5,7 +5,7 @@ import { useEffect } from "react";
 /**
  * Registers public/sw.js, whose whole job is the offline page: when the phone
  * cannot reach the server, the installed app shows "cannot reach
- * spotify-calendar" instead of a blank screen or Safari's error page. It caches
+ * Sillon" instead of a blank screen or Safari's error page. It caches
  * nothing else — see the file for why.
  *
  * Production only: in `next dev` a worker outlives every reload and keeps

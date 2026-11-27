@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveAccessToken } from "@/lib/session";
 import { fetchArtistGenres } from "@/lib/spotify";
-import { getCache, setCache } from "@/lib/cache";
+import { getCache, purgeCache, setCache } from "@/lib/cache";
 import { noteRateLimit } from "@/lib/rateLimit";
 import { isDemo, demoGenres } from "@/lib/demo";
 
@@ -22,6 +22,34 @@ const WORK_BUDGET_MS = 75_000;
  */
 const GENRE_TTL_MS = 30 * 24 * 3600 * 1000;
 const key = (id: string) => `genre-v2:${id}`;
+
+/**
+ * Spotify answers this app's artist lookups without a `genres` field
+ * (Development Mode, measured 2026-11-27 — see fetchArtistGenres). Once seen,
+ * the route remembers it deployment-wide for a week and answers
+ * `genres_unavailable` without calling Spotify; after that, one lookup checks
+ * again, so genres come back by themselves if Spotify restores the field.
+ */
+const WITHHELD_KEY = "genres-withheld";
+const WITHHELD_TTL_MS = 7 * 24 * 3600 * 1000;
+
+const UNAVAILABLE = {
+  error: "genres_unavailable",
+  detail: "Spotify no longer shares artist genres with this app (Development Mode); the genre filter stays empty.",
+};
+
+/**
+ * The first cache generation (`genre:`) holds an empty list for every artist
+ * the dead bulk endpoint was asked about — 4,371 files on the Home Lab volume.
+ * Nothing reads them since `genre-v2:`; they go once per server process.
+ */
+let legacyPurged = false;
+function purgeLegacy() {
+  if (legacyPurged) return;
+  legacyPurged = true;
+  const n = purgeCache("genre_");
+  if (n) console.log(`[GENRES] removed ${n} legacy genre: cache files`);
+}
 
 /**
  * POST { artistIds: string[] }
@@ -47,6 +75,11 @@ export async function POST(req: NextRequest) {
   const auth = await resolveAccessToken();
   if (!auth) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  purgeLegacy();
+  if (getCache<boolean>(WITHHELD_KEY, WITHHELD_TTL_MS)) {
+    // Known for this week: no Spotify call, the client ends the phase.
+    return NextResponse.json({ ...UNAVAILABLE, genres: {} }, { status: 502 });
   }
 
   let ids: string[] = [];
@@ -98,6 +131,16 @@ export async function POST(req: NextRequest) {
         { error: "rate_limited", detail: (e as any)?.message, retryAfter, genres },
         { status: 429, headers: { "Retry-After": String(retryAfter) } },
       );
+    }
+    if ((e as any)?.genresWithheld) {
+      setCache(WITHHELD_KEY, true);
+      // The empty lists cached so far came from the same stripped answers: they
+      // say nothing about the artists and would mask real genres for 30 days.
+      const n = purgeCache("genre-v2_", (entry) => Array.isArray(entry.data) && !entry.data.length);
+      console.log(
+        `[GENRES] Spotify returned an artist without a genres field — lookups paused for 7 days, ${n} empty entries removed`,
+      );
+      return NextResponse.json({ ...UNAVAILABLE, genres }, { status: 502 });
     }
     if (status === 403) {
       // Spotify refuses the artist endpoint itself. Every other artist would get

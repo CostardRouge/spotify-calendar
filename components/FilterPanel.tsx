@@ -184,7 +184,13 @@ export default function FilterPanel({
           />
           <div className="checklist">
             {shownGenres.length === 0 && (
-              <div className="no-match">No genres found</div>
+              <div className="no-match">
+                {genres.length === 0 && albums.length > 0
+                  ? // Not a bug of the filter: Spotify answers this app's artist
+                    // lookups without genres (app/api/genres/route.ts).
+                    "No genres yet — Spotify no longer shares artist genres with apps like this one."
+                  : "No genres found"}
+              </div>
             )}
             {shownGenres.map((g) => (
               <label className="checkrow" key={g.genre}>

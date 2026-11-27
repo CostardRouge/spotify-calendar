@@ -48,6 +48,11 @@ history's turning points.
 
 ### Fixed
 
+- Syncs finish again. Spotify no longer sends artist genres to apps like this one, and the sync kept asking for them,
+  artist after artist, without ever completing — so your library copy on the server had not been updated since
+  September. The genre step now stops at the first answer without genres, and the genre filter says why it is empty.
+- The server's cache sheds the thousands of empty genre entries it had piled up.
+
 - On an iPhone, the bottom tab bar no longer sits under the home indicator or the rounded corners of an installed
   app, and the top bar clears the notch in landscape.
 - On a phone, the calendar header's month picker and "Latest" button no longer run off the right edge, the week

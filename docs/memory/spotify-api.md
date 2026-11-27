@@ -2,6 +2,10 @@
 
 Read before touching anything that calls Spotify: pagination, genres, rate limits, scopes, playback.
 
+## Genres are withheld from this app: Spotify answers artists without a `genres` field (2026-11-27)
+
+**Measured** on the Home Lab instance (a Claude session on the Optiplex, the app's own client credentials, one call): `GET /v1/artists/{id}` → 200 with `external_urls, href, id, images, name, type, uri` only — **no `genres`, `popularity`, `followers` keys at all**. The docs still list `genres` as "Deprecated" and not removed, and say Extended Quota apps are unaffected: in practice a Development Mode app gets no genres. Every genre ever cached here was empty (4,371 `genre:` + 1,311 `genre-v2:` files, back to 2026-09-28); 0 of 7,478 library items had a genre; and the genre phase never finished a sync, so the server library copy had not been rewritten since 2026-09-28. **Decision**: an absent field ≠ an empty array. `fetchArtistGenres` throws `genresWithheld` on the first such answer; the route caches `genres-withheld` deployment-wide for 7 days (one re-probe a week, so genres return by themselves if Spotify restores them), purges the empty `genre-v2:` entries and, once per process, the legacy `genre:` files (`purgeCache`, `lib/cache.ts`), and answers `genres_unavailable` — the client ends the phase and the sync completes. The filter panel explains the empty list. **How to apply**: genres now need a source outside Spotify (Last.fm tags, MusicBrainz via the Spotify-URL relation, Deezer album genres) — a new external dependency, the owner's call (MEMORY.md, open items). Do not "fix" this by lowering the pace or bumping the cache prefix: the data is not there.
+
 ## Genres: one paced request per artist, because the bulk endpoint is gone (2026-09-28)
 
 Spotify tags genres on **artists** only. A saved track, a saved album and the simplified artist objects inside them carry none (`album.genres` is documented as always empty), so genres cannot be derived from the downloaded library — the maintainer asked for exactly that on 2026-09-28, and it is not possible without an artist lookup.

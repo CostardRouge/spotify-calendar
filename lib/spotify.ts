@@ -1,5 +1,5 @@
-import { config } from "./config";
-import { debug } from "./debug";
+import { config } from "./config.ts";
+import { debug } from "./debug.ts";
 import type { Album, SpotifyTokens } from "./types";
 
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -562,6 +562,15 @@ const ARTIST_PACE_MS = 400;
  * swallowed (it would mark the sync "done" with an empty genre filter), and a
  * 403 means the endpoint is refused for every artist — hitting it thousands of
  * times would only burn the rate window.
+ *
+ * Also throws (`genresWithheld`) when the artist comes back 200 with no
+ * `genres` field at all. That is how Spotify answers a Development Mode app
+ * today: measured on the Home Lab instance on 2026-11-27, `GET /artists/{id}`
+ * returned id, name, images… and no `genres`, `popularity` or `followers`.
+ * An absent field is not "this artist has no genre" (that is an empty array):
+ * it says the same of every artist, so the lookup stops at the first answer
+ * instead of caching thousands of empty entries — which is what happened from
+ * 2026-09-28 on, and why the sync never got past the genre phase.
  */
 export async function fetchArtistGenres(
   token: string,
@@ -576,9 +585,15 @@ export async function fetchArtistGenres(
     const id = unique[i];
     try {
       const a: any = await apiGet("/artists/" + encodeURIComponent(id), token);
+      if (a && typeof a === "object" && !("genres" in a)) {
+        const err = new Error("Spotify answers artists without genres for this app");
+        (err as any).genresWithheld = true;
+        throw err;
+      }
       onResult(id, Array.isArray(a?.genres) ? a.genres : [], true);
     } catch (e) {
       const status = (e as any)?.status;
+      if ((e as any)?.genresWithheld) throw e;
       if (status === 429 || status === 401 || status === 403) throw e;
       const http = (e as any)?.httpStatus;
       onResult(id, [], http === 404 || http === 400);

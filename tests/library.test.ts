@@ -27,7 +27,6 @@ function item(
     year: 2000,
     cover: "",
     artists: [{ id: "a1", name: "Artist One" }],
-    genres: [],
     ...over,
   };
 }
@@ -39,11 +38,9 @@ const mondayLater = item("m2", "2026-10-19T20:00:00Z", {
   albumName: "The Record",
   year: 1994,
   artists: [{ id: "a2", name: "Artist Two" }],
-  genres: ["hip hop"],
 });
 const tuesday = item("t1", "2026-10-20T09:00:00Z", {
   year: null,
-  genres: ["jazz", "hip hop"],
 });
 const library = [monday, mondayLater, tuesday];
 
@@ -71,7 +68,7 @@ describe("filterAlbums", () => {
     assert.equal(filterAlbums(library, emptyFilters()).length, 3);
   });
 
-  it("filters by kind, text, release year, artist and genre", () => {
+  it("filters by kind, text, release year and artist", () => {
     const ids = (f: Partial<ReturnType<typeof emptyFilters>>) =>
       filterAlbums(library, { ...emptyFilters(), ...f }).map((i) => i.id);
 
@@ -83,8 +80,6 @@ describe("filterAlbums", () => {
     assert.deepEqual(ids({ yearMin: 1990, yearMax: 1999 }), ["m2"]);
     assert.deepEqual(ids({ yearMin: 2000 }), ["m1"]);
     assert.deepEqual(ids({ artists: new Set(["a2"]) }), ["m2"]);
-    assert.deepEqual(ids({ genres: new Set(["hip hop"]) }), ["m2", "t1"]);
-    assert.deepEqual(ids({ genres: new Set(["jazz"]), kinds: new Set(["track"]) }), []);
   });
 });
 
@@ -94,12 +89,10 @@ describe("computeStats", () => {
     assert.equal(stats.totalAlbums, 2);
     assert.equal(stats.totalTracks, 1);
     assert.equal(stats.uniqueArtists, 2);
-    assert.equal(stats.uniqueGenres, 2);
     assert.deepEqual(stats.busiestDay, { dateKey: "2026-10-19", count: 2 });
     assert.equal(stats.firstSave, "2026-10-19");
     assert.equal(stats.lastSave, "2026-10-20");
     assert.deepEqual(stats.topArtist, { name: "Artist One", count: 2 });
-    assert.deepEqual(stats.topGenre, { genre: "hip hop", count: 2 });
     assert.deepEqual(stats.perYearAdded, [{ year: 2026, count: 3 }]);
     // Release decades count only items with a known year, oldest first.
     assert.deepEqual(stats.perDecade, [

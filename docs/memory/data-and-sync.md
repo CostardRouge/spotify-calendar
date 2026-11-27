@@ -1,12 +1,12 @@
 # Data & sync
 
-Read before touching the sync loop, the client snapshot, the sync-job record, the server caches or the per-user library store.
+Read before touching the sync loop, the client snapshot, the sync-job record, the server-side files or the per-user library store.
 
 ## Everything user-scoped is keyed by Spotify user id (2026-08-20)
 
 The app was single-user in practice until `acfb785`: the IndexedDB snapshot and the sync-job record used fixed keys, so a second account logging in on the same browser saw the first account's library and a sync merged both into one snapshot. Now the session is pinned to the Spotify user id at login (`sp_uid`, httpOnly; `/api/me` resolves and cookies it lazily for older sessions), and three things are keyed by it: the IndexedDB snapshot (`lib/clientCache.ts`), the localStorage sync job (`lib/sync.ts`), and the server-side library files (`lib/libraryStore.ts`).
 
-Two things stay **deployment-wide by design** because they hold app-level, not user-level, data: the artist→genre cache and the rate-limit cooldown (see `spotify-api.md`).
+One thing stays **deployment-wide by design** because it holds app-level, not user-level, data: the rate-limit cooldown (see `spotify-api.md`). The artist→genre cache that used to share that status is gone with the genre feature (2026-11-27).
 
 Pre-isolation records are *claimed* by the first account that logs in after the upgrade (its owner, on a personal browser); an anonymous visitor may read them but never claim them. **How to apply**: any new persisted artefact must be keyed per user id from the start, and must decide explicitly what an anonymous visitor (`ANON_USER_ID = "anon"`) sees.
 
@@ -32,4 +32,4 @@ Two safety properties worth keeping: the file name sanitises the user id *and* a
 
 ## Caches degrade instead of failing (2026-08-20)
 
-`lib/cache.ts` is in-memory with a disk backing; if the disk is not writable it silently falls back to memory-only. `openDB()` in `clientCache.ts` clears its cached promise on failure so a transient IndexedDB error is not remembered forever. **How to apply**: caches here are best-effort by policy — a cache failure must never surface as a user-facing error.
+`openDB()` in `clientCache.ts` clears its cached promise on failure so a transient IndexedDB error is not remembered forever. **How to apply**: caches here are best-effort by policy — a cache failure must never surface as a user-facing error.

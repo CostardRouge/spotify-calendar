@@ -79,10 +79,6 @@ export default function SyncPage() {
           <span>Liked songs</span>
           <Bar loaded={job.tracks.loaded} total={job.tracks.total} />
         </div>
-        <div className="sync-prog-row">
-          <span>Genres</span>
-          <Bar loaded={job.genres.loaded} total={job.genres.total} />
-        </div>
       </div>
 
       <div className="sync-actions">

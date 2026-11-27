@@ -41,16 +41,10 @@ export default function StatsView({
         <StatCard label="Saved albums" value={s.totalAlbums.toLocaleString()} />
         <StatCard label="Liked songs" value={likedSongs.toLocaleString()} />
         <StatCard label="Unique artists" value={s.uniqueArtists.toLocaleString()} />
-        <StatCard label="Genres" value={s.uniqueGenres.toLocaleString()} />
         <StatCard
           label="Top artist"
           value={s.topArtist?.name ?? "—"}
           sub={s.topArtist ? `${s.topArtist.count} albums` : undefined}
-        />
-        <StatCard
-          label="Top genre"
-          value={s.topGenre?.genre ?? "—"}
-          sub={s.topGenre ? `${s.topGenre.count} albums` : undefined}
         />
         <StatCard
           label="Busiest day"

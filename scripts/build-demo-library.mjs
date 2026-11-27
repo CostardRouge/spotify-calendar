@@ -175,23 +175,6 @@ function mulberry32(seed) {
 }
 const rand = mulberry32(20260723);
 
-const GENRE_TAGS = {
-  "Hip-Hop/Rap": ["hip hop", "rap"],
-  Pop: ["pop"],
-  Country: ["country"],
-  Alternative: ["alternative", "indie"],
-  "R&B/Soul": ["r&b", "soul"],
-  Latin: ["latin", "reggaeton"],
-  Metal: ["metal"],
-  Electronic: ["electronic", "jungle"],
-  "K-Pop": ["k-pop"],
-  Soundtrack: ["soundtrack"],
-  Rock: ["rock", "classic rock"],
-  Afrobeats: ["afrobeats"],
-  "French Rap": ["french rap", "rap français"],
-  "French Pop": ["french pop"],
-};
-
 const slug = (s) =>
   s
     .toLowerCase()
@@ -223,7 +206,9 @@ function toEntry(raw, kind, index) {
   const [name, artist, ...rest] = raw;
   const albumName = isTrack ? raw[2] : undefined;
   const cover = isTrack ? raw[3] : raw[2];
-  const genreKey = isTrack ? raw[4] : raw[3];
+  // raw[3] (albums) / raw[4] (tracks) is the feed's genre: kept in the source
+  // rows, no longer emitted — the app has no genre feature (Spotify withholds
+  // genres from it, docs/memory/spotify-api.md).
   const fixedYear = isTrack ? raw[5] : raw[4];
 
   const d = randomDay();
@@ -247,7 +232,6 @@ function toEntry(raw, kind, index) {
     year: Math.min(year, 2026),
     cover: upscale(cover),
     artists: splitArtists(artist),
-    genres: GENRE_TAGS[genreKey] ?? [slug(genreKey).replace(/-/g, " ")],
   };
 }
 

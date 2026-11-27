@@ -142,15 +142,14 @@ await page.goto(`${BASE}/stats`, { waitUntil: "networkidle" });
 await page.waitForTimeout(800);
 await shoot(page, "stats");
 
-// 7. Filters in action — tick a genre and search from the panel.
+// 7. Filters in action — tick the most saved artist in the panel.
 await page.goto(`${BASE}/month`, { waitUntil: "networkidle" });
 await page.waitForSelector(".day.has .covers img", { state: "attached", timeout: 30_000 });
-const genreBox = page
-  .locator(".filter-group", { hasText: "Genre" })
-  .locator(".checkrow", { hasText: "hip hop" })
-  .locator("input")
+const artistBox = page
+  .locator(".filter-group", { hasText: "Artist" })
+  .locator(".checkrow input")
   .first();
-if (await genreBox.count()) await genreBox.check({ force: true });
+if (await artistBox.count()) await artistBox.check({ force: true });
 await page.waitForTimeout(600);
 await shoot(page, "filters");
 

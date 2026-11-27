@@ -23,7 +23,6 @@ export function stateToSearch(s: UrlState): string {
   if (f.yearMin != null) p.set("ymin", String(f.yearMin));
   if (f.yearMax != null) p.set("ymax", String(f.yearMax));
   if (f.artists.size) p.set("artists", [...f.artists].join(","));
-  if (f.genres.size) p.set("genres", [...f.genres].join(","));
   // kinds defaults to both; only serialize when narrowed.
   if (f.kinds.size && f.kinds.size !== KINDS.length)
     p.set("kinds", [...f.kinds].join(","));
@@ -57,9 +56,6 @@ export function searchToState(search: string): Partial<UrlState> {
 
   const artists = p.get("artists");
   if (artists) { f.artists = new Set(artists.split(",").filter(Boolean)); touched = true; }
-
-  const genres = p.get("genres");
-  if (genres) { f.genres = new Set(genres.split(",").filter(Boolean)); touched = true; }
 
   const kinds = p.get("kinds");
   if (kinds) {

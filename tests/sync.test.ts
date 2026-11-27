@@ -13,7 +13,6 @@ function item(id: string, kind: Album["kind"] = "album"): Album {
     year: null,
     cover: "",
     artists: [],
-    genres: [],
   };
 }
 

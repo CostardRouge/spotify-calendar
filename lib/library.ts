@@ -7,7 +7,6 @@ export interface Filters {
   yearMin: number | null;
   yearMax: number | null;
   artists: Set<string>;
-  genres: Set<string>;
   kinds: Set<Kind>; // which sources to show (albums / liked tracks)
 }
 
@@ -16,7 +15,6 @@ export const emptyFilters = (): Filters => ({
   yearMin: null,
   yearMax: null,
   artists: new Set(),
-  genres: new Set(),
   kinds: new Set<Kind>(["album", "track"]),
 });
 
@@ -36,7 +34,6 @@ export function albumPasses(al: Album, f: Filters): boolean {
   if (f.yearMin != null && (al.year == null || al.year < f.yearMin)) return false;
   if (f.yearMax != null && (al.year == null || al.year > f.yearMax)) return false;
   if (f.artists.size && !al.artists.some((a) => f.artists.has(a.id))) return false;
-  if (f.genres.size && !al.genres.some((g) => f.genres.has(g))) return false;
   return true;
 }
 
@@ -111,14 +108,6 @@ export function artistIndex(albums: Album[]): ArtistEntry[] {
   return Object.values(idx).sort((a, b) => b.count - a.count);
 }
 
-export function genreIndex(albums: Album[]): { genre: string; count: number }[] {
-  const idx: Record<string, number> = {};
-  for (const al of albums) for (const g of al.genres) idx[g] = (idx[g] ?? 0) + 1;
-  return Object.entries(idx)
-    .map(([genre, count]) => ({ genre, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
 /** [year, monthIndex] pairs that contain saves, newest first. */
 export function activeMonths(albums: Album[]): [number, number][] {
   const set = new Set<string>();
@@ -141,9 +130,7 @@ export interface LibraryStats {
   totalAlbums: number;
   totalTracks: number;
   uniqueArtists: number;
-  uniqueGenres: number;
   topArtist: { name: string; count: number } | null;
-  topGenre: { genre: string; count: number } | null;
   firstSave: string | null; // dateKey
   lastSave: string | null; // dateKey
   busiestDay: { dateKey: string; count: number } | null;
@@ -155,7 +142,6 @@ export interface LibraryStats {
 export function computeStats(items: Album[]): LibraryStats {
   const albums = items; // includes both kinds; counts split below
   const artists = artistIndex(albums);
-  const genres = genreIndex(albums);
 
   const byDay = groupByDay(albums);
   let busiest: { dateKey: string; count: number } | null = null;
@@ -190,11 +176,9 @@ export function computeStats(items: Album[]): LibraryStats {
     totalAlbums: items.filter((i) => i.kind === "album").length,
     totalTracks: items.filter((i) => i.kind === "track").length,
     uniqueArtists: artists.length,
-    uniqueGenres: genres.length,
     topArtist: artists[0]
       ? { name: artists[0].name, count: artists[0].count }
       : null,
-    topGenre: genres[0] ? { genre: genres[0].genre, count: genres[0].count } : null,
     firstSave: sortedByAdded[0]?.dateKey ?? null,
     lastSave: sortedByAdded[sortedByAdded.length - 1]?.dateKey ?? null,
     busiestDay: busiest,

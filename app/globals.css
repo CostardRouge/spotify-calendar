@@ -64,6 +64,8 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
+/* iOS enlarges text on rotation unless told not to; the layout sets its own sizes. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   font-family: var(--sans);
   background: var(--bg);
@@ -91,7 +93,15 @@ body::before {
 button { font-family: inherit; cursor: pointer; }
 a { color: var(--accent); text-decoration: none; }
 
-.app { display: flex; flex-direction: column; height: 100vh; }
+/* The shell is exactly one screen tall: 100dvh, not 100vh, which on iOS is the
+   height with the browser's toolbars hidden and so pushed the tab bar under
+   them. viewport-fit=cover (app/layout.tsx) lets the page reach the rounded
+   corners and the notch of an installed app; these insets keep the top bar
+   and the sides clear of them (the tab bar takes the bottom one itself). */
+.app {
+  display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
 
 /* ---- Top bar ---- */
 .topbar {
@@ -166,7 +176,9 @@ a { color: var(--accent); text-decoration: none; }
 .btn.icon { padding: 7px 10px; color: var(--muted); }
 .btn.icon:hover { color: var(--text); }
 
-.main { display: flex; flex: 1; min-height: 0; }
+.main { display: flex; flex: 1; min-height: 0; position: relative; }
+/* The phone drawer's backdrop (CalendarApp); desktop never shows it. */
+.side-scrim { display: none; }
 
 /* ---- Side / filter panel ---- */
 .side {
@@ -334,7 +346,7 @@ html.app-ready .side {
 @keyframes fade { from { opacity: 0; } }
 .modal {
   background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
-  width: min(520px, 92%); max-height: 80vh; display: flex; flex-direction: column;
+  width: min(520px, 92%); max-height: 80vh; max-height: 80dvh; display: flex; flex-direction: column;
   overflow: hidden; box-shadow: 0 40px 80px -30px rgba(var(--shadow) / .55);
   animation: rise .28s cubic-bezier(.16,1,.3,1);
 }
@@ -511,10 +523,14 @@ html.app-ready .side {
 /* ---- Empty state ---- */
 .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--muted); }
 .empty-state h2 { font-family: var(--serif); color: var(--text); font-weight: 600; font-size: 24px; margin: 0 0 8px; }
-.empty-actions { display: flex; gap: 10px; margin-top: 20px; }
+.empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
 
 /* ---- Sync page ---- */
-.sync-page { max-width: 820px; margin: 0 auto; padding: 30px 24px; height: 100vh; overflow-y: auto; }
+.sync-page {
+  max-width: 820px; margin: 0 auto; height: 100vh; height: 100dvh; overflow-y: auto;
+  padding: calc(30px + env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    calc(30px + env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+}
 .sync-page-head { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
 .sync-page-head h1 { font-family: var(--serif); font-size: 26px; font-weight: 600; letter-spacing: -.02em; margin: 0; }
 .sync-page-head .spacer { flex: 1; }
@@ -648,11 +664,60 @@ html.app-ready .side {
   .topbar-actions .btn { justify-content: center; }
   .topbar-actions .version { text-align: center; }
 
-  /* Bottom tab bar — one tab per view. */
+  /* The filter panel is a drawer over the calendar, not a column beside it:
+     inline, its 300px left the calendar ~60px on a 390px phone. It opens from
+     the ☰ button only (`drawer-open`, CalendarApp) and starts closed on every
+     load, whatever the URL's desktop `panel` flag says — so the head script's
+     pre-hydration attribute has nothing to do here either. */
+  .side, .side.collapsed, html[data-panel-collapsed] .side {
+    position: absolute; top: 0; bottom: 0; left: 0; z-index: 65; /* over the mini-player (60) */
+    width: min(320px, 88vw); flex-basis: auto;
+    border-right: 1px solid var(--line);
+    box-shadow: 18px 0 40px -24px rgba(var(--shadow) / .6);
+    transform: translateX(-102%); visibility: hidden;
+    transition: transform .24s cubic-bezier(.16,1,.3,1), visibility 0s linear .24s;
+  }
+  .side.drawer-open {
+    transform: none; visibility: visible;
+    transition: transform .24s cubic-bezier(.16,1,.3,1);
+  }
+  .side-inner { width: 100%; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+  .side-scrim {
+    display: block; position: absolute; inset: 0; z-index: 64;
+    background: rgba(var(--shadow) / .35); border: none; padding: 0;
+    animation: fade .2s ease;
+  }
+
+  /* Header: ‹ label › on the first line, the month picker and Latest on the
+     next — side by side they ran ~140px past the right edge. */
+  .cal-head { flex-wrap: wrap; row-gap: 10px; gap: 10px; margin-bottom: 14px; }
+  .cal-head .month-label { flex: 1 1 calc(100% - 110px); font-size: 20px; text-align: center; }
+  .cal-head .spacer { display: none; }
+
+  /* Month cells are ~45px wide here: the count stamp moves to the bottom
+     corner so it no longer sits on the day number, and the covers shrink to
+     fit the cell instead of being cropped by it. */
+  .grid, .weekdays { gap: 4px; }
+  .day { padding: 4px; border-radius: 9px; }
+  .day .count { top: auto; bottom: 3px; right: 3px; font-size: 9px; padding: 1px 5px; }
+  .covers img { width: 30px; height: 30px; border-width: 1px; }
+
+  /* Seven columns of 45px cannot hold a list: the week stacks into days. */
+  .week-grid { grid-template-columns: 1fr; overflow-y: auto; align-content: start; }
+  .week-col { overflow: visible; }
+  .week-col-body { overflow: visible; }
+  .week-empty { margin: 6px 0; font-size: 14px; }
+
+  /* Bottom tab bar — one tab per view, lifted clear of the home indicator
+     (and of the rounded corners in landscape) once viewport-fit=cover makes
+     the insets real. */
   .bottomnav {
     display: flex; flex: 0 0 auto;
     background: var(--panel); border-top: 1px solid var(--line);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    padding: 6px max(4px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom))
+      max(4px, env(safe-area-inset-left));
+    /* .app pads the sides already; the bar's border and fill should still run edge to edge. */
+    margin: 0 calc(-1 * env(safe-area-inset-right)) 0 calc(-1 * env(safe-area-inset-left));
   }
   .bnav-btn {
     flex: 1; background: none; border: none; color: var(--muted);
@@ -664,17 +729,27 @@ html.app-ready .side {
 
   /* Full-width, slightly larger mini-player, floating above the tab bar. */
   .mini-player {
-    left: 12px; right: 12px; width: auto; max-width: none;
-    bottom: calc(64px + env(safe-area-inset-bottom));
+    left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
+    width: auto; max-width: none;
+    bottom: calc(58px + max(6px, env(safe-area-inset-bottom)));
     padding: 11px 13px; gap: 13px;
   }
   .mini-player .mp-cover { width: 52px; height: 52px; }
   .mini-player .mp-title { font-size: 15px; }
   /* Idle state stays compact and right-aligned. */
-  .mini-player[data-empty="true"] { left: auto; right: 12px; width: auto; }
+  .mini-player[data-empty="true"] { left: auto; right: max(12px, env(safe-area-inset-right)); width: auto; }
+  /* Popovers anchored to the player's right edge must not run off the left one. */
+  .mp-devices, .mp-queue { max-width: calc(100vw - 24px); }
 
-  /* Reserve scroll room so content is never hidden behind the floating player. */
-  .view-body { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  /* Reserve scroll room so content is never hidden behind the floating player.
+     The tab bar is in the flow, below .view-body, so its inset is not counted here. */
+  .view-body { padding-bottom: 84px; }
+}
+
+/* Touch screens: iOS zooms the page into any field under 16px when it takes
+   focus, and never zooms back out. */
+@media (pointer: coarse) {
+  .search-input, .mini-search, .range-row input[type=number], .cal-head select { font-size: 16px; }
 }
 
 /* Dropdown menu reveal — a quick, intentional pop instead of an instant jump. */

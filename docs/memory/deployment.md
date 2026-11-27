@@ -24,7 +24,7 @@ Both Dockerfiles pin `node:26.12.1-alpine` (C14; the reasoning in `tooling.md`, 
 
 ## The redirect URI is the source of truth for the public origin (2026-08-20)
 
-`appBaseUrl` in `lib/config.ts` is derived from `SPOTIFY_REDIRECT_URI` (minus the callback path), not from `request.url`, because behind Docker `request.url` exposes the container-internal host and browser redirects would target something the user cannot reach. `APP_BASE_URL` overrides it. Separately, `NEXT_PUBLIC_SITE_URL` only feeds absolute Open Graph / Twitter image URLs.
+`appBaseUrl` in `lib/config.ts` is derived from `SPOTIFY_REDIRECT_URI` (minus the callback path), not from `request.url`, because behind Docker `request.url` exposes the container-internal host and browser redirects would target something the user cannot reach. `APP_BASE_URL` overrides it. Separately, link previews take their origin **from each request** (2026-11-26, `lib/origin.ts`: `X-Forwarded-Host/-Proto` first, else `Host`, held to hostname characters, tested) through `generateMetadata` in `app/layout.tsx` — the CI image is built without any address, and the old `NEXT_PUBLIC_SITE_URL ?? "http://127.0.0.1:3000"` baked localhost into every preview. `NEXT_PUBLIC_SITE_URL` still wins when set, but it is inlined at **build** time, so only a self-built image sees it.
 
 **How to apply**: `SPOTIFY_REDIRECT_URI` must match a Redirect URI registered in the Spotify dashboard *exactly*, including host and port — changing the published port (`APP_PORT`) means registering the new URI there too.
 

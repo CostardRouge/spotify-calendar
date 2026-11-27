@@ -9,8 +9,10 @@ import { GATE_COOKIE, gateOpen, gatePublic, originFrom } from "./lib/sesameGate"
  * library it shows.
  *
  * Left open: the round trip to Sésame (/api/auth/sesame/*), the Docker
- * healthcheck (/api/health) and, through the matcher, Next's static files and
- * the icon set and manifest a phone fetches with no cookie.
+ * healthcheck (/api/health) and, through the matcher, the files a phone or a
+ * link preview fetches with no cookie: Next's static files, the icon set, the
+ * manifest, the preview card, the service worker and its offline page, and
+ * robots.txt (tests/pwa.test.ts checks the matcher both ways).
  */
 export async function proxy(req: NextRequest) {
   const secret = process.env.SESAME_CLIENT_SECRET;
@@ -28,5 +30,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|manifest.webmanifest|og-image.png).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|manifest.webmanifest|og-image.png|sw.js|offline.html|robots.txt).*)"],
 };

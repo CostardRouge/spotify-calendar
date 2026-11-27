@@ -14,11 +14,15 @@ export default function FilterPanel({
   filters,
   setFilters,
   collapsed,
+  drawerOpen,
 }: {
   albums: Album[];
   filters: Filters;
   setFilters: (updater: (f: Filters) => Filters) => void;
+  /** Desktop: the column is folded away (the URL's `panel=0`). */
   collapsed: boolean;
+  /** Phone: the panel is a drawer over the calendar, open or not (globals.css). */
+  drawerOpen: boolean;
 }) {
   const [artistQ, setArtistQ] = useState("");
   const [genreQ, setGenreQ] = useState("");
@@ -66,7 +70,10 @@ export default function FilterPanel({
     });
 
   return (
-    <aside className={"side" + (collapsed ? " collapsed" : "")}>
+    <aside
+      id="filters"
+      className={"side" + (collapsed ? " collapsed" : "") + (drawerOpen ? " drawer-open" : "")}
+    >
       <div className="side-inner">
         <h3>Filters</h3>
 

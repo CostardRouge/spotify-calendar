@@ -29,7 +29,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 - Self-hosted by design — a Docker image on a Home Lab box, not a SaaS. No account system of its own: Spotify is the identity.
 - Privacy posture: OAuth runs server-side, tokens live in httpOnly cookies and never reach the browser.
 - Multi-user is about *safe sharing of one deployment*, not collaboration: every stored artefact is keyed by Spotify user id so accounts cannot see or overwrite each other.
-- The UI aims at a warm, print-like dark aesthetic ("newsprint at night", `app/globals.css`), never blue-black.
+- The app is **Sillon** (since 2026-11-27; the repo and every storage key keep `spotify-calendar`): night-first warm espresso, never blue-black, one vivid orange accent, rounded surfaces, Unbounded + Inter self-hosted; playful but practical — the year as a record, "drop the needle", "a year ago" (`docs/memory/frontend.md`).
 
 ## Decisions at a glance (details in the topic files)
 
@@ -42,6 +42,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 - TypeScript 7 is installed side by side with a `@typescript/typescript6` compatibility package aliased as `typescript`, because typescript-eslint and editors still need the old JS compiler API. → `docs/memory/tooling.md`
 - React Compiler-backed `react-hooks` rules are set to `warn`, deliberately, so lint passes while the findings stay visible. → `docs/memory/tooling.md`
 - The image is built once by CI and pulled by the Home Lab stack; `main` and `latest` are the moving tags, `sha-<short>` is the rollback pin. → `docs/memory/deployment.md`
+- The name and look came out of a design-workshop canvas (three directions: Sillon/vinyl, Diggin'/crate, Almanach/journal); the owner chose Sillon. Diggin's swipe-through-a-crate mode and Almanach's journal feed and retro were folded in only partly (the List view is now "Journal"); the crate mode is not built. → `docs/memory/frontend.md`
 - Phones get the filters as a drawer, the shell is `100dvh` with `viewport-fit=cover` and safe-area insets, a service worker serves only an offline page (never a cached shell), the instance is `noindex`, and link previews take their origin from the request — which made the views render per request. → `docs/memory/frontend.md`, `architecture.md`, `deployment.md`
 - `DEMO_MODE=1` is a first-class mode, not a test hack: it powers the GitHub Pages showcase screenshots and lets anyone run the app with no Spotify app. → `docs/memory/demo-and-showcase.md`
 - Versions (C13 in `second-brain`, 2026-10-17): one SemVer version in `package.json`, `CHANGELOG.md` in English as source, tags and GitHub Releases made by `release.yml` on `main`, a release is its own PR on the maintainer's word; 1.0.0 "Gavotte" because the Home Lab deploy already holds people's libraries, with four turning points backfilled as 0.1.0–0.4.0; codenames are dances, alphabetical; the topbar's options show the version, passed down from the server so `package.json` never reaches the browser. → CLAUDE.md rule 4, `docs/memory/deployment.md`
@@ -52,7 +53,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 
 ## Open items (dated; remove when done)
 
-- 2026-11-26 — **The phone layout and installed-app fixes are verified in Chromium's iPhone 13 emulation only**, where every safe-area inset is 0. Whether the tab bar now clears the home indicator and rounded corners is known once the owner removes and re-adds the app to an iPhone home screen (iOS caches the old viewport with the icon) — `docs/memory/frontend.md`, "Phone layout and the installed app".
+- 2026-11-26 — **The phone layout and installed-app fixes are verified in Chromium's iPhone 13 emulation only**, where every safe-area inset is 0. Whether the tab bar now clears the home indicator and rounded corners is known once the owner removes and re-adds the app to an iPhone home screen (iOS caches the old viewport with the icon) — `docs/memory/frontend.md`, "Phone layout and the installed app". The same re-add shows the Sillon record icon and name (2026-11-27); the Sillon redesign was likewise only seen in Chromium, in both themes, at 390 px and 1440 px.
 
 - 2026-10-19 — **The content security policy is report-only** (`lib/security.ts`): once a tour of the Home Lab instance — every view, a sync, the mini-player, an install to a phone's home screen — shows a clean browser console, the header is renamed `Content-Security-Policy` in `security.ts` and its test, nothing else (`docs/memory/architecture.md`, "Security headers"). Only the maintainer can read that console; a cloud session has no Spotify account.
 

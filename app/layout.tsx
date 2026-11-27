@@ -1,15 +1,37 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
+import localFont from "next/font/local";
 import "./globals.css";
 import SyncProvider from "@/components/SyncProvider";
 import PlaybackProvider from "@/components/PlaybackProvider";
 import ServiceWorker from "@/components/ServiceWorker";
 import { requestOrigin } from "@/lib/origin";
 
-const title = "spotify-calendar";
-const catchline = "Every album, on the day you saved it.";
+// The app is called Sillon — the groove of a record, the trace your listening
+// leaves in time. "Spotify" stays out of the name: Spotify's developer terms
+// keep their mark out of third-party app names. The repository, the storage
+// keys and the cache folders keep "spotify-calendar": renaming them would
+// orphan every library already saved (docs/memory/frontend.md).
+const title = "Sillon";
+const catchline = "Your records, day by day.";
 const description =
-  "Browse your saved Spotify albums on a warm, editorial calendar — grouped by the day you added each one, filtered by year, artist and genre.";
+  "Sillon lays your saved Spotify albums and liked songs on a calendar, by the day you saved each one — the year as a record, a random dig through your past, and what you were saving a year ago.";
+
+// Self-hosted (app/fonts, OFL), so nothing is fetched from a font CDN and the
+// content security policy's `font-src 'self'` holds. Unbounded, round and
+// wide, sets the dates and numbers; Inter everything else.
+const display = localFont({
+  src: "./fonts/unbounded-latin-wght.woff2",
+  weight: "200 900",
+  variable: "--font-display",
+  display: "swap",
+});
+const body = localFont({
+  src: "./fonts/inter-latin-wght.woff2",
+  weight: "100 900",
+  variable: "--font-body",
+  display: "swap",
+});
 
 /**
  * Built per request for one reason: link previews. og:image must be absolute,
@@ -29,7 +51,7 @@ export async function generateMetadata(): Promise<Metadata> {
 const shared: Metadata = {
   title: {
     default: title,
-    template: "%s · spotify-calendar",
+    template: "%s · Sillon",
   },
   description,
   applicationName: title,
@@ -39,9 +61,9 @@ const shared: Metadata = {
     "music library",
     "saved albums",
     "listening history",
-    "contact sheet",
+    "vinyl",
   ],
-  authors: [{ name: "spotify-calendar" }],
+  authors: [{ name: "Sillon" }],
   manifest: "/manifest.webmanifest",
   // The icon set (COMMON-PROJECT-SPEC, C11): public/icons, drawn by
   // scripts/gen-icons.mjs. iOS reads the touch icon alone; the manifest
@@ -56,10 +78,10 @@ const shared: Metadata = {
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
   // "default", not "black-translucent": the latter draws white status-bar
-  // text over the page, unreadable on the light paper theme.
+  // text over the page, unreadable on the light (day) theme.
   appleWebApp: {
     capable: true,
-    title: "spotify-cal",
+    title: "Sillon",
     statusBarStyle: "default",
   },
   // A private instance: someone's library behind Spotify's sign-in (and
@@ -80,7 +102,7 @@ const shared: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "spotify-calendar — a contact sheet of album covers laid out by the day you saved them.",
+        alt: "Sillon — the year drawn as a record, one groove per month, one dot per day you saved music.",
       },
     ],
   },
@@ -94,8 +116,8 @@ const shared: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#efe9dd" },
-    { media: "(prefers-color-scheme: dark)", color: "#17140f" },
+    { media: "(prefers-color-scheme: light)", color: "#f6f1ea" },
+    { media: "(prefers-color-scheme: dark)", color: "#15110e" },
   ],
   colorScheme: "light dark",
   // Lets an installed app reach the rounded corners and the notch, which is
@@ -110,7 +132,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
       <body>
         {/* Runs before the body paints: mirror the URL's collapsed-panel flag
             onto <html> so the sidebar is styled correctly on the very first

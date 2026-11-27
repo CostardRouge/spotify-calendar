@@ -3,22 +3,22 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>spotify-calendar — see your library as a calendar</title>
-<meta name="description" content="A self-hosted Next.js app that lays your saved Spotify albums and liked songs on a calendar, grouped by the day you added them." />
+<title>Sillon — your records, day by day</title>
+<meta name="description" content="Sillon is a self-hosted web app that lays your saved Spotify albums and liked songs on a calendar, by the day you saved them — the year drawn as a record, a random dig through your past, and what you were saving a year ago." />
 <link rel="canonical" href="https://costardrouge.github.io/spotify-calendar/" />
 <!-- Link previews (COMMON-PROJECT-SPEC, C17): the app's own 1200 × 630 card, copied beside the page by pages.yml; absolute, as previews need. -->
 <meta property="og:type" content="website" />
-<meta property="og:site_name" content="spotify-calendar" />
+<meta property="og:site_name" content="Sillon" />
 <meta property="og:url" content="https://costardrouge.github.io/spotify-calendar/" />
-<meta property="og:title" content="spotify-calendar — every album, on the day you saved it" />
-<meta property="og:description" content="Your Spotify library, laid out on a calendar — month, week, year, list and stats views, with filters and playback control. Self-hosted, shown on screenshots of its real interface over a demo library." />
+<meta property="og:title" content="Sillon — your records, day by day" />
+<meta property="og:description" content="Your Spotify library, laid out by the day you saved it — month, week, day, the year as a record, a journal and stats, with filters and playback control. Self-hosted, shown on screenshots of its real interface over a demo library." />
 <meta property="og:image" content="https://costardrouge.github.io/spotify-calendar/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="spotify-calendar — a contact sheet of album covers laid out by the day you saved them." />
+<meta property="og:image:alt" content="Sillon — the year drawn as a record, one groove per month, one dot per day you saved music." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="spotify-calendar — every album, on the day you saved it" />
-<meta name="twitter:description" content="Your Spotify library, laid out on a calendar — month, week, year, list and stats views, with filters and playback control." />
+<meta name="twitter:title" content="Sillon — your records, day by day" />
+<meta name="twitter:description" content="Your Spotify library, laid out by the day you saved it — the year as a record, a random dig through your past, filters and playback control." />
 <meta name="twitter:image" content="https://costardrouge.github.io/spotify-calendar/og-image.png" />
 <!-- The icon set (COMMON-PROJECT-SPEC, C11), copied from public/icons by pages.yml; relative, the page lives under /spotify-calendar/. -->
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
@@ -32,8 +32,8 @@
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "spotify-calendar",
-  "description": "A self-hosted Next.js app that lays your saved Spotify albums and liked songs on a calendar, grouped by the day you added them — month, week, day, year, list and stats views, with filters and playback control.",
+  "name": "Sillon",
+  "description": "A self-hosted web app that lays your saved Spotify albums and liked songs on a calendar, by the day you saved them — month, week and day views, the year drawn as a record, a journal and stats, with filters and playback control.",
   "url": "https://costardrouge.github.io/spotify-calendar/",
   "image": "https://costardrouge.github.io/spotify-calendar/og-image.png",
   "applicationCategory": "MultimediaApplication",
@@ -47,30 +47,32 @@
 </script>
 <style>
   :root {
-    --bg: #efe9dd;
-    --card: #f7f2e9;
-    --line: #d9d0be;
-    --line-soft: #e4dccb;
-    --text: #211f1a;
-    --muted: #8a8272;
-    --accent: #b0532f;
-    --accent2: #984322;
-    --accent-wash: #f0e4d8;
-    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    /* The app's night palette (app/globals.css), its day one below. The page
+       loads no font: headings take the system's heaviest sans. */
+    --bg: #15110e;
+    --card: #1c1612;
+    --line: #2e2620;
+    --line-soft: #261f1a;
+    --text: #f4ece2;
+    --muted: #b9ab99;
+    --accent: #ff6a3d;
+    --accent2: #ff8a63;
+    --accent-wash: #2a1a12;
+    --display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
   }
-  @media (prefers-color-scheme: dark) {
+  @media (prefers-color-scheme: light) {
     :root {
-      --bg: #17140f;
-      --card: #1e1a13;
-      --line: #382f21;
-      --line-soft: #2c261b;
-      --text: #ece4d5;
-      --muted: #9a8f7a;
-      --accent: #c8693e;
-      --accent2: #d97b4e;
-      --accent-wash: #2a2015;
+      --bg: #f6f1ea;
+      --card: #fffaf3;
+      --line: #e3d9cb;
+      --line-soft: #ece4d8;
+      --text: #1a1511;
+      --muted: #6b6157;
+      --accent: #c2410c;
+      --accent2: #9a3412;
+      --accent-wash: #fbe6da;
     }
   }
   * { box-sizing: border-box; }
@@ -95,8 +97,9 @@
     border-bottom: 1px solid var(--line-soft);
   }
   .nav { display: flex; align-items: center; gap: 12px; padding: 14px 0; }
-  .logo { display: flex; align-items: center; gap: 10px; font-family: var(--serif); font-weight: 600; font-size: 18px; }
-  .dot { width: 12px; height: 12px; border-radius: 3px; background: var(--accent); display: inline-block; }
+  .logo { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -.04em; }
+  /* The app's mark: a small record with its orange label. */
+  .dot { width: 24px; height: 24px; border-radius: 50%; display: inline-block; background: radial-gradient(circle, #0d0a08 0 9%, var(--accent) 10% 36%, #0d0a08 37%); box-shadow: 0 0 0 1px var(--line); }
   .nav .spacer { flex: 1; }
   .nav a.plain { color: var(--muted); font-size: 14px; }
   .nav a.plain:hover { color: var(--text); text-decoration: none; }
@@ -108,16 +111,16 @@
     transition: border-color .15s, transform .15s;
   }
   .btn:hover { border-color: var(--accent); text-decoration: none; transform: translateY(-1px); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
   .btn.primary:hover { background: var(--accent2); }
 
   /* --- hero --- */
   .hero { padding: 72px 0 32px; text-align: center; }
   .hero h1 {
-    font-family: var(--serif); font-weight: 600;
+    font-family: var(--display); font-weight: 800;
     font-size: clamp(34px, 5.5vw, 56px);
     line-height: 1.12; margin: 0 auto 18px; max-width: 720px;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.04em;
   }
   .hero h1 em { color: var(--accent); font-style: normal; }
   .hero p.lead { color: var(--muted); font-size: 18px; max-width: 620px; margin: 0 auto 30px; }
@@ -151,7 +154,7 @@
     font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
     text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
   }
-  h2 { font-family: var(--serif); font-weight: 600; font-size: 32px; margin: 0 0 10px; letter-spacing: -0.01em; }
+  h2 { font-family: var(--display); font-weight: 800; font-size: 32px; margin: 0 0 10px; letter-spacing: -0.03em; }
   .sub { color: var(--muted); max-width: 640px; margin: 0 0 36px; }
 
   /* --- feature gallery --- */
@@ -226,7 +229,7 @@
 
 <header>
   <div class="wrap nav">
-    <span class="logo"><span class="dot"></span> spotify-calendar</span>
+    <span class="logo"><span class="dot"></span> sillon</span>
     <span class="spacer"></span>
     <a class="plain" href="#views">Views</a>
     <a class="plain" href="#mobile">Mobile</a>
@@ -241,11 +244,12 @@
 <main class="wrap">
 
   <div class="hero">
-    <h1>Your Spotify library,<br />laid out <em>on a calendar</em></h1>
+    <h1>Your records,<br /><em>day by day</em></h1>
     <p class="lead">
-      Every saved album and liked song, grouped by the day you added it —
-      browse your listening history by month, week, year, list or stats,
-      filter by genre, artist and era, and play anything on your Spotify devices.
+      Sillon lays every saved album and liked song from your Spotify library on
+      the day you saved it — see the year as a record, drop the needle on a random
+      day, find what you were saving a year ago, filter by genre, artist and era,
+      and play anything on your Spotify devices.
     </p>
     <div class="actions">
       <a class="btn primary" href="https://github.com/CostardRouge/spotify-calendar" target="_blank" rel="noopener">View on GitHub</a>
@@ -256,9 +260,9 @@
     <div class="frame">
       <div class="bar">
         <span></span><span></span><span></span>
-        <div class="url">spotify-calendar · month view</div>
+        <div class="url">sillon · month view</div>
       </div>
-      <a href="screenshots/month.png"><img src="screenshots/month.png" alt="Month view: a July calendar grid where each day shows a stack of the album covers saved that day, with a filter panel on the left and a mini-player in the corner" /></a>
+      <a href="screenshots/month.png"><img src="screenshots/month.png" alt="Month view: a July calendar grid where each day shows the album covers saved that day fanned out, with a filter panel on the left and a mini-player in the corner" /></a>
     </div>
   </div>
 
@@ -270,7 +274,7 @@
     <div class="gallery">
       <figure class="shot" style="margin:0">
         <a class="img" href="screenshots/year.png"><img src="screenshots/year.png" alt="Year view screenshot" loading="lazy" /></a>
-        <div class="cap"><h3>Year at a glance</h3><p>Twelve mini-months show the rhythm of your saves — binges and quiet spells alike.</p></div>
+        <div class="cap"><h3>The year as a record</h3><p>One groove per month, one dot per day you saved music — binges and quiet spells at a glance.</p></div>
       </figure>
       <figure class="shot" style="margin:0">
         <a class="img" href="screenshots/stats.png"><img src="screenshots/stats.png" alt="Stats view screenshot" loading="lazy" /></a>
@@ -286,7 +290,7 @@
       </figure>
       <figure class="shot wide" style="margin:0">
         <a class="img" href="screenshots/list.png"><img src="screenshots/list.png" alt="List view screenshot" loading="lazy" /></a>
-        <div class="cap"><h3>The whole library, chronologically</h3><p>A flat, filterable timeline of every save — newest first, with covers, years and genres.</p></div>
+        <div class="cap"><h3>The journal</h3><p>A flat, filterable timeline of every save — newest first, with covers, years and genres.</p></div>
       </figure>
     </div>
   </section>

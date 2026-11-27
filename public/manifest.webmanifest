@@ -1,14 +1,14 @@
 {
-  "name": "spotify-calendar",
-  "short_name": "spotify-cal",
-  "description": "Browse your saved Spotify albums on a warm, editorial calendar — grouped by the day you added each one, filtered by year, artist and genre.",
+  "name": "Sillon",
+  "short_name": "Sillon",
+  "description": "Your saved Spotify albums and liked songs, laid out by the day you saved them — the year as a record, a random dig through your past, and what you were saving a year ago.",
   "id": "/",
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#efe9dd",
-  "theme_color": "#b0532f",
+  "background_color": "#15110e",
+  "theme_color": "#15110e",
   "lang": "en",
   "dir": "ltr",
   "categories": ["music", "lifestyle", "productivity"],
@@ -68,7 +68,7 @@
     {
       "name": "Year",
       "short_name": "Year",
-      "description": "Twelve months at a glance",
+      "description": "The year as a record, one groove per month",
       "url": "year?source=shortcut",
       "icons": [
         {

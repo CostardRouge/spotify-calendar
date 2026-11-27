@@ -59,9 +59,18 @@ export default function Calendar({
               key={c.key}
               className={classes}
               onClick={() => has && onSelectDay(c.key)}
+              onKeyDown={(e) => {
+                if (has && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  onSelectDay(c.key);
+                }
+              }}
+              role={has ? "button" : undefined}
+              tabIndex={has ? 0 : undefined}
+              aria-label={has ? `${c.key}: ${c.albums.length} saved` : undefined}
             >
               <div className="dnum">{c.day}</div>
-              {has && <div className="count">{c.albums.length}</div>}
+              {c.albums.length > 1 && <div className="count">×{c.albums.length}</div>}
               <Covers albums={c.albums} />
             </div>
           );

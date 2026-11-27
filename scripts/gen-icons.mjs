@@ -20,7 +20,7 @@
  * the PNGs in the same commit: the SVG is not what ships to a phone.
  * tests/icons.test.ts holds the sizes and the touch icon's missing alpha.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -28,7 +28,7 @@ import sharp from "sharp";
 const ICONS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "icons");
 
 /** The tile's own ink: what a transparent pixel is painted onto where alpha is dropped. */
-const TILE = "#211f1a";
+const TILE = "#15110e";
 
 /**
  * `flatten` + `removeAlpha` drop the alpha channel, for the touch icon only:
@@ -60,5 +60,28 @@ for (const job of JOBS) {
   await pipeline.png().toFile(join(ICONS_DIR, job.out));
   console.log(`✓ ${job.out} (${job.size}×${job.size}) — ${job.why}`);
 }
+
+// favicon.ico, at the site root because browsers ask for it blindly: the 16
+// and 32 PNGs just written, wrapped in an ICO container (PNG entries are
+// valid in an ICO since Windows Vista and in every current browser).
+const entries = ["favicon-16.png", "favicon-32.png"].map((name) => readFileSync(join(ICONS_DIR, name)));
+const header = Buffer.alloc(6 + 16 * entries.length);
+header.writeUInt16LE(0, 0); // reserved
+header.writeUInt16LE(1, 2); // type: icon
+header.writeUInt16LE(entries.length, 4);
+let offset = header.length;
+entries.forEach((data, i) => {
+  const size = i === 0 ? 16 : 32;
+  const at = 6 + 16 * i;
+  header[at] = size; // width
+  header[at + 1] = size; // height
+  header.writeUInt16LE(1, at + 4); // colour planes
+  header.writeUInt16LE(32, at + 6); // bits per pixel
+  header.writeUInt32LE(data.length, at + 8);
+  header.writeUInt32LE(offset, at + 12);
+  offset += data.length;
+});
+writeFileSync(join(ICONS_DIR, "..", "favicon.ico"), Buffer.concat([header, ...entries]));
+console.log("✓ favicon.ico (16 + 32) — the root favicon");
 
 console.log("Done. Commit the PNGs alongside the SVG you changed.");

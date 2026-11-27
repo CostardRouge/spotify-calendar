@@ -1,6 +1,6 @@
 # Changelog
 
-What each release of spotify-calendar brings to the person using it. The format follows
+What each release of Sillon (named spotify-calendar before) brings to the person using it. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html); `.github/workflows/release.yml` turns each section into a
 tag and a GitHub Release once it reaches `main` (COMMON-PROJECT-SPEC C13 in `second-brain`). Written in English, like
@@ -10,6 +10,13 @@ history's turning points.
 ## [Unreleased]
 
 ### Added
+
+- The Year view draws your year as a record: one groove per month, January at the label and December at the rim,
+  one dot per day you saved music, bigger on busy days. Tap a dot to open the day, or a month in the list beside it.
+- "Drop the needle" opens a random day from your library (within your filters), to dig back into what you saved.
+- Each day now recalls what you were saving around the same date a year before; tap the card to go there.
+- On a phone, swipe left or right on a day to turn to the next or previous one.
+- While Spotify plays, the mini-player's cover turns like a record.
 
 - Sésame in front of the whole app, when its three settings are set: a visit goes through « Sign in with Sésame »
   (silently once you are signed in there) before the Spotify sign-in, so only the people given access in Sésame can
@@ -21,12 +28,20 @@ history's turning points.
 
 - On a phone, the filters open as a drawer over the calendar instead of squeezing it into a sliver, and close with
   a tap beside them or on a view tab.
-- Installed to a home screen, the app now shows a "Cannot reach spotify-calendar" page when the server cannot be
+- Installed to a home screen, the app now shows a "Cannot reach Sillon" page when the server cannot be
   reached, instead of a blank screen; the library saved on the device is untouched.
 - Long-press shortcuts on the installed app's icon: Month, Week, Year and Stats.
 - The showcase page describes the app to search engines in a structured form.
 
 ### Changed
+
+- The app has a name: **Sillon** — the groove of a record. A new look comes with it: a warm night theme by default
+  (a day theme when your device is in light mode), one vivid orange, rounded surfaces, and the Unbounded and Inter
+  typefaces. A new record icon on your home screen; remove and re-add an installed app to see it. Your saved library,
+  sync and settings carry over untouched.
+- Month cells fan their covers out like records pulled from a crate, with the day's count beside them.
+- The views have icons, and the List view is now the Journal; the day view opens on the day's first cover with its
+  record sliding out.
 
 - Search engines and AI crawlers are asked to stay out of your instance; links shared in a chat still get the app's
   preview card, now pointing at the address the link was opened from instead of a local one.

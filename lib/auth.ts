@@ -19,11 +19,14 @@ export async function readSession() {
     // Spotify user id of the session owner. Empty for sessions minted before
     // per-user isolation — resolved lazily (and cookied) by /api/me.
     userId: c.get(COOKIE.userId)?.value ?? "",
+    // Display name for the account menu; empty for sessions minted before it
+    // was stored (the menu falls back to a generic label until the next login).
+    userName: c.get(COOKIE.userName)?.value ?? "",
   };
 }
 
-/** Persist the Spotify user id of the session owner onto a response. */
-export function writeUserIdCookie(res: NextResponse, userId: string) {
+/** Persist the Spotify user id (and, at login, display name) of the session owner. */
+export function writeUserIdCookie(res: NextResponse, userId: string, userName?: string) {
   res.cookies.set(COOKIE.userId, userId, {
     httpOnly: true,
     secure: isProd,
@@ -31,6 +34,15 @@ export function writeUserIdCookie(res: NextResponse, userId: string) {
     path: "/",
     maxAge: 60 * 60 * 24 * 30, // matches the refresh token's lifetime
   });
+  if (userName) {
+    res.cookies.set(COOKIE.userName, userName, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  }
 }
 
 /** Persist tokens onto a response as httpOnly cookies. */
@@ -68,7 +80,7 @@ export function writeTokenCookies(res: NextResponse, tokens: SpotifyTokens) {
 
 /** Remove all auth cookies from a response. */
 export function clearAuthCookies(res: NextResponse) {
-  [COOKIE.access, COOKIE.refresh, COOKIE.expires, COOKIE.scope, COOKIE.state, COOKIE.userId].forEach((name) =>
+  [COOKIE.access, COOKIE.refresh, COOKIE.expires, COOKIE.scope, COOKIE.state, COOKIE.userId, COOKIE.userName].forEach((name) =>
     res.cookies.set(name, "", { path: "/", maxAge: 0 }),
   );
 }

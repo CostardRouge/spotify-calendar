@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSync } from "@/components/SyncProvider";
-import { phaseLabel } from "@/components/SyncWidget";
+import { phaseLabel } from "@/lib/sync";
 
 function Bar({ loaded, total }: { loaded: number; total: number | null }) {
   const pct = total ? Math.min(100, Math.round((loaded / total) * 100)) : 0;

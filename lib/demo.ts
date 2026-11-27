@@ -29,19 +29,6 @@ export function demoPage(
   return { items, total: all.length, next: offset + limit < all.length };
 }
 
-/** Genres for artist ids — items ship pre-genred, so resolve from the fixtures. */
-export function demoGenres(artistIds: string[]): Record<string, string[]> {
-  const byArtist: Record<string, string[]> = {};
-  for (const item of [...library.albums, ...library.tracks]) {
-    for (const a of item.artists) {
-      if (!byArtist[a.id]) byArtist[a.id] = item.genres;
-    }
-  }
-  const out: Record<string, string[]> = {};
-  for (const id of artistIds) out[id] = byArtist[id] ?? [];
-  return out;
-}
-
 /** A believable "now playing" so the mini-player isn't empty in screenshots. */
 export function demoPlayback(): PlaybackState {
   const t = library.tracks[0];

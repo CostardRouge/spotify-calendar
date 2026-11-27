@@ -12,7 +12,7 @@ Everything else that is user-visible state (anchor date, filters, panel collapse
 
 The Spotify client secret and the OAuth tokens never leave the server: tokens are httpOnly cookies (`lib/auth.ts`), and every Spotify call goes through a route under `app/api/`. The *library itself*, by contrast, is fetched page by page by the browser and cached client-side (see `data-and-sync.md`). So `app/api/*` routes are thin: resolve a token, call `lib/spotify.ts`, map errors. Business logic that does not need a secret belongs in `lib/` as a pure function (`lib/library.ts` filters, `lib/dates.ts`, `lib/urlState.ts`) so it stays testable and usable from both sides.
 
-Every API route sets `export const dynamic = "force-dynamic"` and a `maxDuration` budget (30s for album/track pages, 120s for genres, 15s for player control). Those budgets are load-bearing: the genre chunk size was tuned against the 120s one.
+Every API route sets `export const dynamic = "force-dynamic"` and a `maxDuration` budget (30s for album/track pages, 15s for player control). Those budgets are load-bearing: the client's page size is tuned against them.
 
 ## Security headers come from one list, and the policy is report-only (2026-10-19)
 

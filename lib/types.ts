@@ -18,7 +18,6 @@ export interface Album {
   year: number | null; // release year
   cover: string; // album art URL ("" if none)
   artists: Artist[];
-  genres: string[];
 }
 
 export interface LibraryResponse {

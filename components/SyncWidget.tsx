@@ -19,8 +19,6 @@ export function phaseLabel(job: SyncJob): string {
         return `Albums ${job.albums.loaded}/${job.albums.total ?? "…"}`;
       if (job.phase === "tracks")
         return `Songs ${job.tracks.loaded}/${job.tracks.total ?? "…"}`;
-      if (job.phase === "genres")
-        return `Genres ${job.genres.loaded}/${job.genres.total ?? "…"}`;
       return "Syncing…";
     }
     case "paused":

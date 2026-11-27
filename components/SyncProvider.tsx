@@ -29,12 +29,6 @@ import {
 
 const PAGE = 50;
 const SNAPSHOT_EVERY_PAGES = 5;
-// Artists per /api/genres POST. Spotify's bulk artists endpoint is gone (Feb
-// 2026), so each uncached artist is one paced upstream request (~0.4s): 150 is
-// about what the route gets through in its 75s work budget. Ids it does not
-// reach come back in `pending` and are simply sent again.
-const GENRE_CHUNK = 150;
-
 // Auto-start rules, applied once per app load after hydration:
 // – a job interrupted mid-run (tab closed while "running") resumes immediately;
 // – a user-paused job resumes only after sitting idle this long, so pausing
@@ -386,96 +380,6 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
     return fresh.length;
   }
 
-  async function syncGenres() {
-    patchJob({ phase: "genres" });
-    // Every artist, not only those of still-ungenred items: an item whose first
-    // artist resolved before an interruption would otherwise never get its
-    // other artists' genres. Known artists cost nothing — the route answers them
-    // from its cache without calling Spotify.
-    const need = new Set<string>();
-    for (const it of itemsRef.current)
-      for (const a of it.artists) if (a.id) need.add(a.id);
-    const ids = [...need];
-    patchJob({ genres: { loaded: 0, total: ids.length } });
-    if (!ids.length) return;
-
-    const genreMap: Record<string, string[]> = {};
-
-    // Fold whatever genres we've resolved so far onto the items and persist.
-    // Called after every chunk and before surfacing a rate limit, so partial
-    // progress survives a pause, a closed tab or a resume. Merged, not
-    // replaced: an item's artists can resolve across several chunks.
-    const applyGenres = () => {
-      if (!Object.keys(genreMap).length) return;
-      setItems(
-        itemsRef.current.map((it) => {
-          const found = it.artists.flatMap((a) => genreMap[a.id] ?? []);
-          if (!found.length) return it;
-          const merged = [...new Set([...it.genres, ...found])];
-          return merged.length === it.genres.length ? it : { ...it, genres: merged };
-        }),
-      );
-      persistSnapshot();
-    };
-
-    // A queue, not fixed offsets: the route may stop before the end of a chunk
-    // (time budget) and hands back what it did not reach in `pending`.
-    let queue = ids;
-    while (queue.length) {
-      if (stopRequested()) return;
-      const chunk = queue.slice(0, GENRE_CHUNK);
-      const res = await fetch("/api/genres", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ artistIds: chunk }),
-        signal: AbortSignal.timeout(120000),
-      });
-      const body = await res.json().catch(() => ({} as any));
-      // Error bodies carry the genres resolved before the failure, too.
-      if (body?.genres) Object.assign(genreMap, body.genres);
-      if (res.ok) {
-        const pending: string[] = Array.isArray(body.pending) ? body.pending : [];
-        // No progress at all would loop forever; treat it as the end of the phase.
-        if (pending.length >= chunk.length) {
-          log("warn", "Genre lookup made no progress — stopping; the next sync will retry");
-          break;
-        }
-        queue = [...pending, ...queue.slice(chunk.length)];
-        // Persist as we go: a full first pass takes a while (one request per
-        // artist), and closing the tab must not cost what was already resolved.
-        applyGenres();
-      } else {
-        // A non-ok response here used to be silently ignored, so a throttled
-        // genre phase would still complete "done" with an empty genre filter.
-        // Surface it so run() can pause/flag and the phase can be resumed.
-        if (res.status === 401) {
-          const e: any = new Error(body.error || "Session expired — please log in again.");
-          e.unauthorized = true;
-          throw e;
-        }
-        if (res.status === 429) {
-          applyGenres(); // keep partial progress before backing off
-          const e: any = new Error(body.detail || "Spotify rate limit");
-          e.rateLimited = true;
-          e.retryAfter =
-            Number(body.retryAfter) || Number(res.headers.get("Retry-After")) || 60;
-          throw e;
-        }
-        if (body?.error === "genres_unavailable") {
-          // Spotify refuses the artist endpoint outright: finish the sync with
-          // whatever genres exist rather than fail it — albums and tracks are fine.
-          log("warn", body.detail || "Genres unavailable from Spotify");
-          break;
-        }
-        // Other errors: skip this chunk, keep going (best-effort).
-        queue = queue.slice(chunk.length);
-      }
-      patchJob({ genres: { loaded: ids.length - queue.length, total: ids.length } });
-    }
-
-    applyGenres();
-  }
-
   const run = useCallback(async (mode: RunMode) => {
     if (runningRef.current) return;
 
@@ -537,9 +441,6 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
         await syncKind("track");
         if (stopRequested()) return finishStopped();
       }
-      await syncGenres();
-      if (stopRequested()) return finishStopped();
-
       patchJob({ status: "done", phase: "done", finishedAt: Date.now() });
       persistSnapshot();
       pushServerLibrary();

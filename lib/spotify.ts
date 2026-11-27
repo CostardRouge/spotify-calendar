@@ -483,7 +483,6 @@ function mapSavedAlbum(item: any): Album | null {
     year: parseInt(String(al.release_date ?? "").slice(0, 4)) || null,
     cover: al.images?.[0]?.url ?? "",
     artists: mapArtists(al.artists),
-    genres: [],
   };
 }
 
@@ -501,7 +500,6 @@ function mapSavedTrack(item: any): Album | null {
     year: parseInt(String(al.release_date ?? "").slice(0, 4)) || null,
     cover: al.images?.[0]?.url ?? "",
     artists: mapArtists(t.artists),
-    genres: [],
   };
 }
 
@@ -527,76 +525,3 @@ export async function fetchTracksPage(
   return { items, total: d.total ?? items.length, next: !!d.next };
 }
 
-/**
- * Pause between two artist lookups: ~2.5 requests/s, ~75 per 30s rolling
- * window. Spotify does not publish the Development Mode limit; this is a
- * conservative guess, and a 429 is still handled (short ones waited out by
- * apiGet, long ones surfaced) — the pacing only keeps us from provoking it.
- */
-const ARTIST_PACE_MS = 400;
-
-/**
- * Resolve genres for artist ids, one `GET /artists/{id}` per artist, reporting
- * each result through `onResult` as soon as it lands.
- *
- * Why one request per artist: Spotify tags genres on artists only (a track, an
- * album or the simplified artist inside them carries none — `album.genres` is
- * documented as always empty), and the bulk "Get Several Artists" endpoint
- * (`GET /artists?ids=`) was removed for Development Mode apps in the February
- * 2026 Web API change (existing apps migrated 2026-03-09). The single-artist
- * endpoint is kept and still returns `genres`.
- *
- * The previous per-artist attempt (f57200e) failed for two reasons this avoids:
- * results were only returned at the end, so the first 429 threw away a whole
- * chunk of already-fetched artists; and it fired ~12 requests/s. Here every
- * answer is handed to the caller (which caches it) before the next request, and
- * the pace is ARTIST_PACE_MS.
- *
- * `definitive` is false for a transient failure (5xx/network after apiGet's
- * bounded retries): the caller must not cache that empty answer. A 404/400 is
- * definitive — the id is gone, asking again will not help.
- *
- * Stops starting new lookups once `deadline` passes, so the caller can return
- * inside its route budget; ids never reported are the caller's to retry.
- * Throws on 429 / 401 / 403: a rate limit or auth failure must never be
- * swallowed (it would mark the sync "done" with an empty genre filter), and a
- * 403 means the endpoint is refused for every artist — hitting it thousands of
- * times would only burn the rate window.
- *
- * Also throws (`genresWithheld`) when the artist comes back 200 with no
- * `genres` field at all. That is how Spotify answers a Development Mode app
- * today: measured on the Home Lab instance on 2026-11-27, `GET /artists/{id}`
- * returned id, name, images… and no `genres`, `popularity` or `followers`.
- * An absent field is not "this artist has no genre" (that is an empty array):
- * it says the same of every artist, so the lookup stops at the first answer
- * instead of caching thousands of empty entries — which is what happened from
- * 2026-09-28 on, and why the sync never got past the genre phase.
- */
-export async function fetchArtistGenres(
-  token: string,
-  ids: string[],
-  deadline: number,
-  onResult: (id: string, genres: string[], definitive: boolean) => void,
-): Promise<void> {
-  const unique = [...new Set(ids.filter(Boolean))];
-  for (let i = 0; i < unique.length; i++) {
-    if (i > 0) await sleep(ARTIST_PACE_MS);
-    if (Date.now() >= deadline) return;
-    const id = unique[i];
-    try {
-      const a: any = await apiGet("/artists/" + encodeURIComponent(id), token);
-      if (a && typeof a === "object" && !("genres" in a)) {
-        const err = new Error("Spotify answers artists without genres for this app");
-        (err as any).genresWithheld = true;
-        throw err;
-      }
-      onResult(id, Array.isArray(a?.genres) ? a.genres : [], true);
-    } catch (e) {
-      const status = (e as any)?.status;
-      if ((e as any)?.genresWithheld) throw e;
-      if (status === 429 || status === 401 || status === 403) throw e;
-      const http = (e as any)?.httpStatus;
-      onResult(id, [], http === 404 || http === 400);
-    }
-  }
-}

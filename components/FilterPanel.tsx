@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import type { Album } from "@/lib/types";
 import {
   artistIndex,
-  genreIndex,
   yearBounds,
   type Filters,
 } from "@/lib/library";
@@ -25,10 +24,8 @@ export default function FilterPanel({
   drawerOpen: boolean;
 }) {
   const [artistQ, setArtistQ] = useState("");
-  const [genreQ, setGenreQ] = useState("");
 
   const artists = useMemo(() => artistIndex(albums), [albums]);
-  const genres = useMemo(() => genreIndex(albums), [albums]);
   const bounds = useMemo(() => yearBounds(albums), [albums]);
 
   const shownArtists = useMemo(
@@ -38,12 +35,8 @@ export default function FilterPanel({
         .slice(0, 300),
     [artists, artistQ],
   );
-  const shownGenres = useMemo(
-    () => genres.filter((g) => g.genre.toLowerCase().includes(genreQ.toLowerCase())),
-    [genres, genreQ],
-  );
 
-  const toggle = (key: "artists" | "genres", value: string) =>
+  const toggle = (key: "artists", value: string) =>
     setFilters((f) => {
       const next = new Set(f[key]);
       next.has(value) ? next.delete(value) : next.add(value);
@@ -170,46 +163,6 @@ export default function FilterPanel({
               }
             >
               Clear artists
-            </button>
-          )}
-        </div>
-
-        <div className="filter-group">
-          <span className="gl">Genre</span>
-          <input
-            className="mini-search"
-            placeholder="Find genre…"
-            value={genreQ}
-            onChange={(e) => setGenreQ(e.target.value)}
-          />
-          <div className="checklist">
-            {shownGenres.length === 0 && (
-              <div className="no-match">
-                {genres.length === 0 && albums.length > 0
-                  ? // Not a bug of the filter: Spotify answers this app's artist
-                    // lookups without genres (app/api/genres/route.ts).
-                    "No genres yet — Spotify no longer shares artist genres with apps like this one."
-                  : "No genres found"}
-              </div>
-            )}
-            {shownGenres.map((g) => (
-              <label className="checkrow" key={g.genre}>
-                <input
-                  type="checkbox"
-                  checked={filters.genres.has(g.genre)}
-                  onChange={() => toggle("genres", g.genre)}
-                />
-                <span>{g.genre}</span>
-                <span className="cnt">{g.count}</span>
-              </label>
-            ))}
-          </div>
-          {filters.genres.size > 0 && (
-            <button
-              className="clear-link"
-              onClick={() => setFilters((f) => ({ ...f, genres: new Set() }))}
-            >
-              Clear genres
             </button>
           )}
         </div>

@@ -1,7 +1,7 @@
 import type { Album } from "./types";
 
 export type JobStatus = "idle" | "running" | "paused" | "done" | "error";
-export type Phase = "" | "albums" | "tracks" | "genres" | "done";
+export type Phase = "" | "albums" | "tracks" | "done";
 
 export interface JobLog {
   ts: number;
@@ -18,7 +18,6 @@ export interface SyncJob {
   phase: Phase;
   albums: Progress;
   tracks: Progress;
-  genres: Progress;
   startedAt: number | null;
   updatedAt: number | null;
   finishedAt: number | null;
@@ -34,7 +33,6 @@ export function initialJob(): SyncJob {
     phase: "",
     albums: { loaded: 0, total: null },
     tracks: { loaded: 0, total: null },
-    genres: { loaded: 0, total: null },
     startedAt: null,
     updatedAt: null,
     finishedAt: null,

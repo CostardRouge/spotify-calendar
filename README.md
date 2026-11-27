@@ -7,7 +7,7 @@
 added each one. Each day cell fans out the covers saved that day; the year is
 drawn as a record (one groove per month, one dot per day), "drop the needle"
 opens a random day, and each day recalls what you saved a year before. A side
-panel filters by **search, release year, artist, and genre**.
+panel filters by **search, release year and artist**.
 
 Authentication runs **server-side** (Authorization Code flow) — your Spotify
 tokens live in httpOnly cookies and never reach the browser.
@@ -80,7 +80,7 @@ app/
     auth/login       -> redirect to Spotify authorize
     auth/callback    -> exchange code, set httpOnly cookies
     auth/logout      -> clear cookies
-    albums           -> server fetch of saved albums (+ genre enrichment, token refresh)
+    albums           -> server fetch of saved albums (token refresh included)
     health           -> healthcheck endpoint
   login/page.tsx     -> connect screen
   page.tsx           -> calendar app (client)
@@ -109,12 +109,10 @@ lib/                -> config, auth cookies, Spotify client, pure filter helpers
   weekly.
 - **Docker:** `Dockerfile.dev` (hot reload) and `Dockerfile` (multi-stage,
   non-root, healthcheck) with matching Compose files.
-- **Data:** the whole saved-albums library is fetched server-side and enriched
-  with genres (Spotify tags genres on artists, so a few albums may be untagged).
-  Since Spotify's February 2026 API change there is no bulk artist lookup: genres
-  resolve one paced request per artist (~0.4 s each), so the first pass on a
-  large library takes a while and may pause on a rate limit; results are cached
-  for 30 days under `CACHE_DIR`, so later syncs only look up new artists.
+- **Data:** the whole library (saved albums and liked songs) is fetched
+  server-side, page by page. There are no genres: Spotify withholds them from
+  apps in Development Mode (artists come back without a `genres` field), so the
+  app has no genre filter.
 
 ## Sésame in front (optional)
 
@@ -145,9 +143,8 @@ overwrite another user's library.
   file per account under `LIBRARY_DIR` (defaults to `<CACHE_DIR>/library`,
   persisted by the Home Lab volume). On a fresh browser or another device the
   app restores your library from there instead of forcing a full re-sync.
-- **Shared, but harmless:** the artist→genre cache (global Spotify data, not
-  user data) and the rate-limit cooldown (the 429 applies to the whole app)
-  remain deployment-wide by design.
+- **Shared, but harmless:** the rate-limit cooldown (the 429 applies to the
+  whole app) remains deployment-wide by design.
 
 ## Demo mode & showcase page
 

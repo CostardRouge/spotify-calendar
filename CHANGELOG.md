@@ -50,8 +50,7 @@ history's turning points.
 
 - Syncs finish again. Spotify no longer sends artist genres to apps like this one, and the sync kept asking for them,
   artist after artist, without ever completing — so your library copy on the server had not been updated since
-  September. The genre step now stops at the first answer without genres, and the genre filter says why it is empty.
-- The server's cache sheds the thousands of empty genre entries it had piled up.
+  September. Syncs are also shorter now, with no genre step.
 
 - On an iPhone, the bottom tab bar no longer sits under the home indicator or the rounded corners of an installed
   app, and the top bar clears the notch in landscape.
@@ -59,6 +58,11 @@ history's turning points.
   view stacks its days instead of seven unreadable columns, and month cells show their covers and counts without
   hiding the day number.
 - Tapping a search box or a year field on a phone no longer zooms the page in.
+
+### Removed
+
+- The genre filter and the genre figures in Stats. Spotify withholds genres from apps like this one, so they were
+  always empty; the server also deletes the thousands of empty genre files it had stored.
 
 ## [1.1.0] - 2026-10-22 — Habanera
 

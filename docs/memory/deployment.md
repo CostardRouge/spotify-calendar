@@ -20,7 +20,7 @@ Both Dockerfiles pin `node:26.12.1-alpine` (C14; the reasoning in `tooling.md`, 
 
 ## Persistence is one named volume (2026-08-20)
 
-`spotify-calendar-data` mounts at `/app/.cache` in the prod stack, with `CACHE_DIR=/app/.cache`. That single volume carries both the artist→genre cache and the per-user library store (`LIBRARY_DIR` defaults to `<CACHE_DIR>/library`). **How to apply**: a new server-side persisted artefact should live under `CACHE_DIR` too, or it silently vanishes on the next container replacement — and `make clean` / `make reset` remove volumes, so they wipe user libraries.
+`spotify-calendar-data` mounts at `/app/.cache` in the prod stack, with `CACHE_DIR=/app/.cache`. That single volume carries the per-user library store (`LIBRARY_DIR` defaults to `<CACHE_DIR>/library`); the genre cache files that also lived there are deleted at each server start by `instrumentation.ts` since the genre feature went (2026-11-27). **How to apply**: a new server-side persisted artefact should live under `CACHE_DIR` too, or it silently vanishes on the next container replacement — and `make clean` / `make reset` remove volumes, so they wipe user libraries.
 
 ## The redirect URI is the source of truth for the public origin (2026-08-20)
 
@@ -30,7 +30,7 @@ Both Dockerfiles pin `node:26.12.1-alpine` (C14; the reasoning in `tooling.md`, 
 
 ## Environment variables (2026-08-20)
 
-Documented in `.env.example`, which `make init` copies to `.env`. Required: `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` (`assertConfigured()` throws naming whichever is missing). Optional: `SPOTIFY_REDIRECT_URI`, `APP_PORT`, `APP_BASE_URL`, `NEXT_PUBLIC_SITE_URL`, `CACHE_TTL_SECONDS`, `CACHE_DIR`, `LIBRARY_DIR`, `DEMO_MODE`.
+Documented in `.env.example`, which `make init` copies to `.env`. Required: `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` (`assertConfigured()` throws naming whichever is missing). Optional: `SPOTIFY_REDIRECT_URI`, `APP_PORT`, `APP_BASE_URL`, `NEXT_PUBLIC_SITE_URL`, `CACHE_DIR`, `LIBRARY_DIR`, `DEMO_MODE`.
 
 Real values live only in the untracked `.env` on the maintainer's machine and on the Home Lab host; nothing else reads them. No secret has ever been committed to this repo — `.env.example` (placeholder values) is the only env file in its history. **How to apply**: adding a variable means adding it to `.env.example` with a comment, and the compose files read `.env` via `env_file`, so nothing else is needed for either stack.
 

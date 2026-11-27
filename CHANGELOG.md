@@ -47,6 +47,10 @@ history's turning points.
 
 ### Changed
 
+- Sillon has its own address: the Home Lab instance moves to **sillon.steeve.website** (the old address redirects
+  to it), the code to **github.com/CostardRouge/sillon** and the showcase to **costardrouge.github.io/sillon**.
+  The first visit on the new address asks you to sign in again; your library comes back from the server copy,
+  or from a sync.
 - The views (Month, Week, Day, Year, Journal, Stats) now sit in a side rail on a computer, with "Drop the needle"
   and your account. The filters are a bar that is always in view above them: All / Albums / Songs, the search, and
   the Artist and Released menus. On a phone the views stay in the tab bar and the filters become a row you can

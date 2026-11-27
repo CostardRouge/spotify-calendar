@@ -7,7 +7,7 @@ import { join } from "node:path";
 // findable, with a legal notice whose facts the page must keep true. The page
 // loads one inline script — the Umami loader and the notice's switch — and
 // nothing else; this suite holds the HTML to that, and the notice to the code.
-const SITE = "https://costardrouge.github.io/spotify-calendar/";
+const SITE = "https://costardrouge.github.io/sillon/";
 const html = readFileSync(join(process.cwd(), "showcase", "index.html"), "utf8");
 // JSON-LD is data the browser never runs, so it is not counted as a script.
 const JSON_LD = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/;

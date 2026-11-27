@@ -10,9 +10,11 @@ import { THEME_BOOT_SCRIPT } from "@/lib/prefs";
 
 // The app is called Sillon — the groove of a record, the trace your listening
 // leaves in time. "Spotify" stays out of the name: Spotify's developer terms
-// keep their mark out of third-party app names. The repository, the storage
-// keys and the cache folders keep "spotify-calendar": renaming them would
-// orphan every library already saved (docs/memory/frontend.md).
+// keep their mark out of third-party app names. The repository, the image and
+// the domain are sillon too; only the identifiers nobody reads — the IndexedDB
+// name, the HMAC labels, the volume, the temp folders — keep
+// "spotify-calendar", because renaming them orphans saved libraries or signs
+// everyone out for nothing (docs/memory/deployment.md).
 const title = "Sillon";
 const catchline = "Your records, day by day.";
 const description =

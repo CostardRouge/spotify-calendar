@@ -5,9 +5,9 @@
 #   docker login ghcr.io -u <github-username> -p <PAT with read:packages>
 # Usage: make prod-pull && make prod-up   (or: docker compose -f docker-compose.prod.yml pull && up -d)
 services:
-  spotify-calendar:
-    image: ghcr.io/costardrouge/spotify-calendar:latest
-    container_name: spotify-calendar
+  sillon:
+    image: ghcr.io/costardrouge/sillon:latest
+    container_name: sillon
     ports:
       - "${APP_PORT:-3000}:3000"
     env_file:
@@ -17,7 +17,9 @@ services:
       - CACHE_DIR=/app/.cache
     volumes:
       # Persists the per-user library store (under /app/.cache/library by
-      # default) across restarts.
+      # default) across restarts. The volume keeps its pre-Sillon name on
+      # purpose: Docker cannot rename a volume, so a new name would start an
+      # empty one and every saved library would stay behind in the old one.
       - spotify-calendar-data:/app/.cache
     restart: unless-stopped
     healthcheck:

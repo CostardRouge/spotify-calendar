@@ -4,7 +4,7 @@ Agents read this file at the start of every session. These rules override the ag
 
 ## Context
 
-- **spotify-calendar** — a Next.js 16.2 app (App Router, Turbopack, `output: "standalone"`) on React 19.2 and TypeScript 7, on Node 26 (`.nvmrc`, what CI and the Docker images run — `node:26.12.1-alpine`, an exact tag Dependabot raises; `engines` keeps the floor at 22.18, the first Node that runs the tests' TypeScript without a flag). It lays your saved Spotify albums and liked tracks on a calendar, grouped by the day you saved them; OAuth runs server-side and the tokens live in httpOnly cookies. It deploys as a Docker image published to GHCR by `.github/workflows/docker-build.yml` on every push to `main`, pulled by a self-hosted Home Lab stack (`docker-compose.prod.yml`); `.github/workflows/pages.yml` separately builds the demo-mode showcase and deploys it to GitHub Pages. Package manager: **npm** — the lockfile is `package-lock.json`.
+- **Sillon** (repository `CostardRouge/sillon`, `spotify-calendar` until 2026-11-27) — a Next.js 16.2 app (App Router, Turbopack, `output: "standalone"`) on React 19.2 and TypeScript 7, on Node 26 (`.nvmrc`, what CI and the Docker images run — `node:26.12.1-alpine`, an exact tag Dependabot raises; `engines` keeps the floor at 22.18, the first Node that runs the tests' TypeScript without a flag). It lays your saved Spotify albums and liked tracks on a calendar, grouped by the day you saved them; OAuth runs server-side and the tokens live in httpOnly cookies. It deploys as a Docker image published to GHCR by `.github/workflows/docker-build.yml` on every push to `main`, pulled by a self-hosted Home Lab stack (`docker-compose.prod.yml`); `.github/workflows/pages.yml` separately builds the demo-mode showcase and deploys it to GitHub Pages. Package manager: **npm** — the lockfile is `package-lock.json`.
 - `npm run dev` (dev server), `npm run build`, `npm run lint` (ESLint flat config), `npm run typecheck` (TypeScript 7 native compiler), `npm test` (Node's own runner over `tests/**/*.test.ts`, the TypeScript stripped by Node itself — no test dependency; it covers the pure logic of `lib/`: the day keys and grouping, the filters and stats, the rate-limit cooldown, the sync's resume arithmetic). Anything that renders is still looked at in the running app. **The gate is lint + typecheck + test + build**: `.github/workflows/ci.yml` runs it on every pull request and on `main`, then builds the Docker image and checks its `/api/health`; `.github/dependabot.yml` raises npm packages, the workflows' actions and the Docker base image weekly. `make up` / `make prod-deploy` drive the Docker stacks (`make help` lists every target).
 - **This repository is PUBLIC** (measured 2026-10-19). So rule 3's public-repo restriction applies: a Registry block carries only `Project:`, ticked boxes and one `Log:` line — never a `Last point:` nor an open box. `registry.yml` reads the visibility itself, so nothing here needs changing if the repo goes private.
 - Several agent sessions may run **in parallel** on this repo. Git history must stay readable: **one commit = one task**.
@@ -72,7 +72,7 @@ Obligations:
 ## Rule 3 — Report the project's state (MANDATORY)
 
 The register of what is open is the private `second-brain` repository: one
-folder per project, filed by group and domain and found by its slug (`spotify-calendar`
+folder per project, filed by group and domain and found by its slug (`sillon`
 here), whose `README.md` carries a typed front matter (`state`, `point`,
 `repos`) and a `## To do` list of checkboxes. `PROJECTS.md` at its root is
 GENERATED from those folders. That register is the source of truth — not this
@@ -94,7 +94,7 @@ clean and its French does not mix with an English description. The labels are
 English, what follows them is French:
 
     <!-- Registry
-    Project: spotify-calendar
+    Project: sillon
     Last point: <the project as it now stands, in French>
     - [x] <an existing box this work closes, copied from the fiche>
     - [ ] <a new open action, in French>

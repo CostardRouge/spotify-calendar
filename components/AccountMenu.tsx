@@ -9,7 +9,7 @@ import Icon from "@/components/Icons";
 import { phaseLabel } from "@/lib/sync";
 import { THEMES, type Theme } from "@/lib/prefs";
 
-const REPO = "https://github.com/CostardRouge/spotify-calendar";
+const REPO = "https://github.com/CostardRouge/sillon";
 
 // One /api/me read per page, shared by both account buttons (side rail and
 // phone header). The name comes from a cookie set at login, so this costs no

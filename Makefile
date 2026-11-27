@@ -103,4 +103,4 @@ ps: ## Show running containers
 clean: ## Stop everything and remove volumes + built image
 	-$(DC) down -v
 	-$(DC_PROD) down -v
-	-docker image rm ghcr.io/costardrouge/spotify-calendar:latest 2>/dev/null || true
+	-docker image rm ghcr.io/costardrouge/sillon:latest 2>/dev/null || true

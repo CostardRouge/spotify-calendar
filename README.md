@@ -1,8 +1,8 @@
 # Sillon
 
-**[Showcase / screenshots →](https://costardrouge.github.io/spotify-calendar/)**
+**[Showcase / screenshots →](https://costardrouge.github.io/sillon/)**
 
-**Sillon** (this repository: `spotify-calendar`) is a Next.js app that lays your
+**Sillon** (its repository was named `spotify-calendar` until 2026-11) is a Next.js app that lays your
 **saved Spotify albums and liked songs** on a calendar, grouped by the day you
 added each one. Each day cell fans out the covers saved that day; the year is
 drawn as a record (one groove per month, one dot per day), "drop the needle"
@@ -121,7 +121,7 @@ whole instance sits behind a Sésame sign-in (the owner's OpenID Connect
 provider, `costardrouge/sesame`): `proxy.ts` sends any visit without its gate
 cookie through Sésame and back, silently when Sésame's session is open. Who
 may use the instance is decided in Sésame (membership of the app
-`spotify-calendar`, redirect `<origin>/api/auth/sesame/callback`); the Spotify
+`sillon`, redirect `<origin>/api/auth/sesame/callback`); the Spotify
 sign-in stays behind it, unchanged, and decides whose library is shown. Left
 open: the round trip itself and `/api/health`. Empty, nothing changes; demo
 mode ignores it.

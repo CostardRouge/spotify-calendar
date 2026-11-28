@@ -13,7 +13,7 @@ const text = (body: string, status: number) =>
  * is exchanged with the verifier this browser's flow cookie kept, the state
  * and the ID token checked by openid-client; then the gate cookie that lets
  * this browser past proxy.ts. Who may reach this point with a code is
- * Sésame's decision (membership of the app `spotify-calendar` there).
+ * Sésame's decision (membership of the app `sillon` there).
  */
 export async function GET(req: NextRequest) {
   const here = originFrom(req.headers, req.nextUrl.origin);
